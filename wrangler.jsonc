@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mushmore-auth",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-17",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mushmore-auth-db",
+      "database_id": "4f029d06-4cfa-46d4-a261-c1ab21fb8a89",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
