@@ -4,7 +4,7 @@ const SANDBOX = "https://api-m.sandbox.paypal.com";
 const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json; charset=utf-8","access-control-allow-origin":ORIGIN,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, Authorization","cache-control":"no-store","vary":"Origin"}});
 const err=(m,s=400)=>json({error:m},s);
 const txt=(v,n=254)=>typeof v==="string"?v.trim().slice(0,n):"";
-function paypalBase(env){return env.PAYPAL_ENVIRONMENT==="sandbox"?SANDBOX:API}
+function paypalBase(env){return env.PAYPAL_ENVIRONMENT==="live"?API:SANDBOX}
 async function paypalToken(env){
  if(!env.PAYPAL_CLIENT_ID||!env.PAYPAL_CLIENT_SECRET)throw new Error("PayPal غير مضبوط بعد. أضف PAYPAL_CLIENT_ID وPAYPAL_CLIENT_SECRET إلى Cloudflare Worker Secrets.");
  const r=await fetch(paypalBase(env)+"/v1/oauth2/token",{method:"POST",headers:{authorization:"Basic "+btoa(env.PAYPAL_CLIENT_ID+":"+env.PAYPAL_CLIENT_SECRET),"content-type":"application/x-www-form-urlencoded"},body:"grant_type=client_credentials"});
