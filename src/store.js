@@ -34,7 +34,8 @@ async function verifyFirebaseToken(request, env) {
   const match = auth.match(/^Bearer\s+(.+)$/i);
   if (!match) return null;
   try {
-    const url = "https://identitytoolkit.googleapis.com/v1/accounts:lookup";
+    if (!env.FIREBASE_API_KEY) return null;
+    const url = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + encodeURIComponent(env.FIREBASE_API_KEY);
     const r = await fetch(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
