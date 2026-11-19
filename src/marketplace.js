@@ -96,7 +96,7 @@ export async function handleMarketplaceRequest(req,env){
    const r=await env.DB.prepare("SELECT p.*,s.store_name,s.email,w.wallet_address,w.label AS wallet_label FROM store_seller_payouts p JOIN store_sellers s ON s.id=p.seller_id JOIN store_seller_wallets w ON w.id=p.wallet_id ORDER BY p.created_at DESC LIMIT 200").all();
    return json({payouts:r.results||[]});
  }
- match=p.match(/^\\/store\\/admin\\/payouts\\/([a-zA-Z0-9-]+)$/);
+ match=p.match(/^\/store\\/admin\\/payouts\\/([a-zA-Z0-9-]+)$/);
  if(match&&m==="PATCH"){
    const a=await admin(req,env);if(!a)return error("غير مصرح.",401);
    const d=await body(req),action=text(d&&d.action,20),note=text(d&&d.note,1000);
