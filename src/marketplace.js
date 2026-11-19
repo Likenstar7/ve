@@ -91,6 +91,16 @@ export async function handleMarketplaceRequest(req,env){
    try{await env.DB.prepare("INSERT INTO store_seller_payouts(id,seller_id,wallet_id,amount_cents,network,idempotency_key) VALUES(?,?,?,?,?,?)").bind(id,s.store.id,walletId,amount,w.network,key).run();}catch{return error("مفتاح الطلب مستخدم أو تعذر إنشاء الطلب.",409);}
    return json({success:true,payoutId:id,status:"requested",message:"تم تسجيل الطلب وسيخضع لمراجعة الامتثال وموافقة الإدارة."},201);
  }
+
+ const walletAdminMatch=p.match(/^\/store\/admin\/wallets\/([a-zA-Z0-9-]+)$/);
+ if(walletAdminMatch&&m==="PATCH"){
+   const a=await admin(req,env);if(!a)return error("غير مصرح.",401);
+   const d=await body(req),status=text(d&&d.status,20);
+   if(!["verified","rejected","disabled"].includes(status))return error("حالة المحفظة غير صالحة.");
+   const r=await env.DB.prepare("UPDATE store_seller_wallets SET status=?,verified_at=CASE WHEN ?='verified' THEN CURRENT_TIMESTAMP ELSE verified_at END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('pending','verified')").bind(status,status,walletAdminMatch[1]).run();
+   if(!r.meta?.changes)return error("لم يتم العثور على محفظة قابلة للتحديث.",404);
+   return json({success:true,status});
+ }
  if(p==="/store/admin/payouts"&&m==="GET"){
    if(!await admin(req,env))return error("غير مصرح.",401);
    const r=await env.DB.prepare("SELECT p.*,s.store_name,s.email,w.wallet_address,w.label AS wallet_label FROM store_seller_payouts p JOIN store_sellers s ON s.id=p.seller_id JOIN store_seller_wallets w ON w.id=p.wallet_id ORDER BY p.created_at DESC LIMIT 200").all();
@@ -106,6 +116,13 @@ export async function handleMarketplaceRequest(req,env){
      if(!r.meta?.changes)return error("تعذر توثيق المحفظة.",409);
      await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'wallet_verified',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
      return json({success:true});
+   }
+   if(action==="clear_compliance"){
+     if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("اعتماد الامتثال العام غير مفعّل في إعدادات Worker.",403);
+     if(note.length<20)return error("أضف مرجع التحقق وملاحظات الامتثال (20 حرفاً على الأقل).");
+     await env.DB.prepare("UPDATE store_seller_payouts SET compliance_status='cleared',compliance_note=?,status='under_review',updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('requested','under_review')").bind(note,pyo.id).run();
+     await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'compliance_cleared',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
+     return json({success:true,complianceStatus:"cleared"});
    }
    if(action==="approve"){
      if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("لا يمكن الموافقة قبل تفعيل ضوابط الامتثال ومزود التحويل.",403);
