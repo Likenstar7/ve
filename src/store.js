@@ -114,6 +114,7 @@ async function adminProducts(request, env, method, id) {
     await env.DB.prepare(`INSERT INTO store_products (id,title,slug,description,category,image_url,price_cents,compare_at_cents,stock,active,sku,product_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(newId, title, slug, ...fields, sku || null, productType).run();
   } catch (e) { return fail("تعذر حفظ المنتج. تحقق من عدم تكرار الرابط المختصر.", 409); }
+  await env.DB.prepare("INSERT OR REPLACE INTO store_warehouse_stock(product_id,warehouse_id,quantity,reserved) VALUES(?,?,?,0)").bind(newId, "wh-default", stock).run();
   return response({ success: true, id: newId }, 201);
 }
 async function createOrder(request, env) {
