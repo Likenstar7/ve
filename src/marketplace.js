@@ -24,7 +24,7 @@ export async function handleMarketplaceRequest(req,env){
  if(p==="/store/sellers/apply"&&m==="POST"){
    const u=await identity(req,env);if(!u)return error("سجّل الدخول أولاً.",401);
    const d=await body(req);if(!d)return error("البيانات غير صالحة.");
-   const storeName=text(d.storeName,120),phone=text(d.phone,50),country=text(d.country,100),latitude=Number(d.latitude),longitude=Number(d.longitude);
+   const storeName=text(d.storeName,120),phone=text(d.phone,50),country=text(d.country,100),latitude=d.latitude===""||d.latitude==null?null:Number(d.latitude),longitude=d.longitude===""||d.longitude==null?null:Number(d.longitude);
    if(!storeName||!u.email)return error("اسم المتجر والبريد مطلوبان.");
    const id=crypto.randomUUID();
    try{await env.DB.prepare("INSERT INTO store_sellers(id,firebase_uid,store_name,contact_name,email,phone,country,latitude,longitude) VALUES(?,?,?,?,?,?,?,?,?)").bind(id,u.uid,storeName,u.name,u.email,phone,country,Number.isFinite(latitude)&&latitude>=-90&&latitude<=90?latitude:null,Number.isFinite(longitude)&&longitude>=-180&&longitude<=180?longitude:null).run();}
