@@ -159,6 +159,7 @@ async function createOrder(request, env) {
   const orderNumber = "MM-" + Date.now().toString(36).toUpperCase() + "-" + crypto.randomUUID().slice(0, 4).toUpperCase();
   const user = await verifyFirebaseToken(request, env);
   const updates = [];
+  const warehouseUpdates = [];
   for (const [id, qty] of quantities) {
     const result = await env.DB.prepare("UPDATE store_products SET stock=stock-?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND active=1 AND stock>=?")
       .bind(qty, id, qty).run();
@@ -167,6 +168,22 @@ async function createOrder(request, env) {
       return fail("تغيّر المخزون أثناء الطلب. حدّث السلة وحاول مجدداً.", 409);
     }
     updates.push({ id, qty });
+    const warehouseRows = await env.DB.prepare("SELECT warehouse_id,quantity,reserved FROM store_warehouse_stock WHERE product_id=? ORDER BY warehouse_id").bind(id).all();
+    let remaining = qty;
+    for (const wh of (warehouseRows.results || [])) {
+      const available = wh.quantity - wh.reserved;
+      if (available <= 0 || remaining <= 0) continue;
+      const take = Math.min(available, remaining);
+      await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity-?,updated_at=CURRENT_TIMESTAMP WHERE product_id=? AND warehouse_id=? AND quantity-reserved>=?")
+        .bind(take,id,wh.warehouse_id,take).run();
+      warehouseUpdates.push({id,warehouseId:wh.warehouse_id,qty:take});
+      remaining -= take;
+    }
+    if (remaining > 0) {
+      for (const done of updates) await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(done.qty,done.id).run();
+      for (const done of warehouseUpdates) await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+? WHERE product_id=? AND warehouse_id=?").bind(done.qty,done.id,done.warehouseId).run();
+      return fail("مخزون المستودعات لا يكفي لإتمام الطلب.",409);
+    }
   }
   try {
     await env.DB.prepare(`INSERT INTO store_orders
@@ -176,6 +193,7 @@ async function createOrder(request, env) {
         JSON.stringify(snapshot), subtotal, 0, subtotal, CURRENCY, payment, cleanText(data.note, 1000)).run();
   } catch (e) {
     for (const done of updates) await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(done.qty, done.id).run();
+    for (const done of warehouseUpdates) await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+? WHERE product_id=? AND warehouse_id=?").bind(done.qty,done.id,done.warehouseId).run();
     return fail("تعذر إنشاء الطلب. حاول مرة أخرى.", 500);
   }
   return response({ success: true, orderNumber, total: subtotal / 100, currency: CURRENCY, paymentMethod: payment }, 201);
