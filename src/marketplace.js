@@ -82,7 +82,7 @@ export async function handleMarketplaceRequest(req,env){
    if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("طلبات السحب متوقفة حتى اكتمال اعتماد الامتثال ومزود التحويل.",503);
    const d=await body(req),walletId=text(d&&d.walletId,80),amount=Math.floor(Number(d&&d.amountCents)),key=text(d&&d.idempotencyKey,100);
    if(!walletId||!Number.isSafeInteger(amount)||amount<100||!key)return error("حدد محفظة موثقة ومبلغاً صالحاً ومفتاح طلب فريداً.");
-   const w=await env.DB.prepare("SELECT * FROM store_seller_wallets WHERE id=? AND seller_id=? AND status='verified'").bind(walletId,s.store.id).first();
+   const w=await env.DB.prepare("SELECT * FROM store_seller_wallets WHERE id=? AND seller_id=? AND status IN ('pending','verified')").bind(walletId,s.store.id).first();
    if(!w)return error("المحفظة غير موثقة أو لا تخص هذا البائع.",403);
    const bal=await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN entry_type IN ('sale_credit','adjustment_credit') THEN amount_cents ELSE -amount_cents END),0) AS n FROM store_seller_ledger WHERE seller_id=? AND currency='EUR' AND status='available'").bind(s.store.id).first();
    const queued=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents),0) AS n FROM store_seller_payouts WHERE seller_id=? AND source_currency='EUR' AND status IN ('requested','under_review','approved','processing')").bind(s.store.id).first();
@@ -125,6 +125,8 @@ export async function handleMarketplaceRequest(req,env){
      return json({success:true,complianceStatus:"cleared"});
    }
    if(action==="approve"){
+     const wallet=await env.DB.prepare("SELECT status FROM store_seller_wallets WHERE id=? AND seller_id=?").bind(pyo.wallet_id,pyo.seller_id).first();
+     if(!wallet||wallet.status!=="verified")return error("يجب توثيق محفظة البائع قبل الموافقة على الصرف.",403);
      if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("لا يمكن الموافقة قبل تفعيل ضوابط الامتثال ومزود التحويل.",403);
      if(pyo.status!=="requested"&&pyo.status!=="under_review")return error("حالة الطلب لا تسمح بالموافقة.",409);
      if(pyo.compliance_status!=="cleared")return error("يجب إكمال فحص الامتثال وتسجيل compliance_status=cleared أولاً.",403);
