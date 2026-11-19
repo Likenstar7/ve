@@ -1,3 +1,5 @@
+import { handleMarketplaceRequest } from "./marketplace.js";
+
 const STORE_ORIGIN = "https://mushmoreby.blogspot.com";
 const CURRENCY = "EUR";
 
@@ -203,6 +205,8 @@ async function adminOrders(request, env, method, id) {
   return fail("المسار غير موجود.", 404);
 }
 export async function handleStoreRequest(request, env) {
+  const marketplaceResponse = await handleMarketplaceRequest(request, env);
+  if (marketplaceResponse) return marketplaceResponse;
   if (request.headers.get("Origin") !== STORE_ORIGIN) return new Response("Forbidden", { status: 403 });
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: {
     "access-control-allow-origin": STORE_ORIGIN,
