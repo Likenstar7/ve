@@ -116,3 +116,18 @@ Products can be marked `digital` in the catalog. The current storefront supports
 3. Deploy the Worker from the connected GitHub repository.
 4. Paste `blogger/mushmore-store-page-v2.html` into a Blogger Page.
 5. Test checkout, stock deduction, seller application, admin approval, warehouse stock and manual tracking before accepting live orders.
+
+
+## PayPal checkout (Mushmore)
+
+The storefront now uses PayPal Orders API with server-side order creation and capture. It defaults to **Sandbox**. Configure these Worker variables in Cloudflare Dashboard → Workers & Pages → mushmore-auth → Settings → Variables and Secrets:
+
+- `PAYPAL_CLIENT_ID` — PayPal REST app client ID (plain variable).
+- `PAYPAL_CLIENT_SECRET` — PayPal REST app secret (Secret).
+- `PAYPAL_ENVIRONMENT` — set to `sandbox` for testing. Change to `live` only after completing sandbox tests and confirming the merchant account is approved for live checkout.
+
+The browser receives only the client ID. The secret remains in Worker Secrets. Card funding is rendered only when PayPal reports it eligible for the merchant and buyer. Mushmore never collects or stores card numbers.
+
+Buyer location is optional and requested through browser geolocation permission. Seller coordinates are captured when a seller submits their application. Distance labels and radius filtering are approximate straight-line distances, not courier route distances.
+
+Physical delivery still needs a shipping address and a connected carrier/fulfillment workflow before an order can be dispatched. The current minimal checkout records email, SKU/items, payment status and optional buyer coordinates; it does not yet collect a full delivery address or calculate live shipping rates.
