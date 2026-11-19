@@ -1,4 +1,5 @@
 import { handleMarketplaceRequest } from "./marketplace.js";
+import { handlePaypalRequest } from "./paypal.js";
 
 const STORE_ORIGIN = "https://mushmoreby.blogspot.com";
 const CURRENCY = "EUR";
@@ -57,7 +58,7 @@ async function requireAdmin(request, env) {
 }
 function productRow(row) {
   return {
-    id: row.id, title: row.title, slug: row.slug, sku: row.sku || "", sellerId: row.seller_id || null, productType: row.product_type || "physical", description: row.description,
+    id: row.id, title: row.title, slug: row.slug, sku: row.sku || "", sellerId: row.seller_id || null, sellerLatitude: row.seller_latitude ?? null, sellerLongitude: row.seller_longitude ?? null, productType: row.product_type || "physical", description: row.description,
     category: row.category, imageUrl: row.image_url,
     price: row.price_cents / 100,
     compareAtPrice: row.compare_at_cents == null ? null : row.compare_at_cents / 100,
@@ -68,11 +69,11 @@ async function listProducts(env, url) {
   const category = cleanText(url.searchParams.get("category"), 80);
   const search = cleanText(url.searchParams.get("q"), 100);
   const limit = Math.min(60, Math.max(1, int(url.searchParams.get("limit"), 1, 60) || 24));
-  let sql = "SELECT * FROM store_products WHERE active = 1";
+  let sql = "SELECT p.*, s.latitude AS seller_latitude, s.longitude AS seller_longitude FROM store_products p LEFT JOIN store_sellers s ON s.id=p.seller_id WHERE p.active = 1";
   const args = [];
-  if (category) { sql += " AND category = ?"; args.push(category); }
-  if (search) { sql += " AND (title LIKE ? OR description LIKE ?)"; args.push("%" + search + "%", "%" + search + "%"); }
-  sql += " ORDER BY created_at DESC LIMIT ?";
+  if (category) { sql += " AND p.category = ?"; args.push(category); }
+  if (search) { sql += " AND (p.title LIKE ? OR p.description LIKE ?)"; args.push("%" + search + "%", "%" + search + "%"); }
+  sql += " ORDER BY p.created_at DESC LIMIT ?";
   args.push(limit);
   const result = await env.DB.prepare(sql).bind(...args).all();
   return response({ products: (result.results || []).map(productRow), currency: CURRENCY });
@@ -229,6 +230,8 @@ async function adminOrders(request, env, method, id) {
   return fail("المسار غير موجود.", 404);
 }
 export async function handleStoreRequest(request, env) {
+  const paypalResponse = await handlePaypalRequest(request, env);
+  if (paypalResponse) return paypalResponse;
   const marketplaceResponse = await handleMarketplaceRequest(request, env);
   if (marketplaceResponse) return marketplaceResponse;
   if (request.headers.get("Origin") !== STORE_ORIGIN) return new Response("Forbidden", { status: 403 });
