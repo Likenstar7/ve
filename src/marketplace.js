@@ -44,7 +44,22 @@ export async function handleMarketplaceRequest(req,env){
    await env.DB.prepare("UPDATE store_sellers SET status=?,commission_bps=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,bps,match[1]).run();
    return json({success:true});
  }
- if(p==="/store/seller/me"&&m==="GET"){
+
+ if(p==="/store/seller/products"&&(m==="GET"||m==="POST")){
+   const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
+   if(m==="GET"){
+     const r=await env.DB.prepare("SELECT id,title,slug,sku,description,category,image_url,price_cents,compare_at_cents,stock,active,product_type FROM store_products WHERE seller_id=? ORDER BY created_at DESC").bind(s.store.id).all();
+     return json({products:(r.results||[]).map(x=>({...x,price:x.price_cents/100,compareAtPrice:x.compare_at_cents==null?null:x.compare_at_cents/100}))});
+   }
+   const d=await body(req);if(!d)return error("البيانات غير صالحة.");
+   const title=text(d.title,160),sku=text(d.sku,80).toUpperCase(),price=Number(d.priceCents),stock=Number(d.stock);
+   if(!title||!sku||!Number.isSafeInteger(price)||price<0||!Number.isInteger(stock)||stock<0)return error("الاسم وSKU والسعر والمخزون مطلوبة.");
+   const id=crypto.randomUUID(),slug=(title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,80)||id);
+   try{await env.DB.prepare("INSERT INTO store_products(id,title,slug,sku,description,category,image_url,price_cents,stock,active,product_type,seller_id) VALUES(?,?,?,?,?,?,?,?,?,1,?,?)").bind(id,title,slug,sku,text(d.description,5000),text(d.category,80),text(d.imageUrl,1000),price,stock,d.productType==="digital"?"digital":"physical",s.store.id).run();}
+   catch{return error("تعذر إضافة المنتج؛ تحقق من أن SKU غير مستخدم.",409)}
+   return json({success:true,id},201);
+ }
+\n if(p==="/store/seller/me"&&m==="GET"){
    const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
    return json({seller:{id:s.store.id,storeName:s.store.store_name,status:s.store.status,commissionBps:s.store.commission_bps}});
  }
