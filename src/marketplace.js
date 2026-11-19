@@ -57,10 +57,10 @@ export async function handleMarketplaceRequest(req,env){
    const id=crypto.randomUUID(),slug=(title.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,80)||id);
    try{await env.DB.prepare("INSERT INTO store_products(id,title,slug,sku,description,category,image_url,price_cents,stock,active,product_type,seller_id) VALUES(?,?,?,?,?,?,?,?,?,1,?,?)").bind(id,title,slug,sku,text(d.description,5000),text(d.category,80),text(d.imageUrl,1000),price,stock,d.productType==="digital"?"digital":"physical",s.store.id).run();}
    catch{return error("تعذر إضافة المنتج؛ تحقق من أن SKU غير مستخدم.",409)}
+   await env.DB.prepare("INSERT OR REPLACE INTO store_warehouse_stock(product_id,warehouse_id,quantity,reserved) VALUES(?,?,?,0)").bind(id,"wh-default",stock).run();
    return json({success:true,id},201);
  }
-\n await env.DB.prepare("INSERT OR REPLACE INTO store_warehouse_stock(product_id,warehouse_id,quantity,reserved) VALUES(?,?,?,0)").bind(id,"wh-default",stock).run();
- if(p==="/store/seller/me"&&m==="GET"){
+\n if(p==="/store/seller/me"&&m==="GET"){
    const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
    return json({seller:{id:s.store.id,storeName:s.store.store_name,status:s.store.status,commissionBps:s.store.commission_bps}});
  }
