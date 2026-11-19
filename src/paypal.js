@@ -24,7 +24,7 @@ export async function handlePaypalRequest(req,env){
  }
  if(u.pathname==="/store/paypal/create"&&req.method==="POST"){
   let d;try{d=await req.json()}catch{return err("بيانات الطلب غير صالحة.");}
-  const email=txt(d.email).toLowerCase(),items=Array.isArray(d.items)?d.items:[];
+  const email=txt(d.email).toLowerCase(),items=Array.isArray(d.items)?d.items:[],lat=d.latitude===""||d.latitude==null?null:Number(d.latitude),lng=d.longitude===""||d.longitude==null?null:Number(d.longitude);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!items.length||items.length>30)return err("أدخل بريداً صحيحاً وأضف منتجات إلى السلة.");
   const quantities=new Map();for(const x of items){const id=txt(x.id,80),q=Number(x.quantity);if(!id||!Number.isInteger(q)||q<1||q>50)return err("عنصر في السلة غير صالح.");quantities.set(id,(quantities.get(id)||0)+q);}
   const ids=[...quantities.keys()],marks=ids.map(()=>"?").join(",");
@@ -34,7 +34,7 @@ export async function handlePaypalRequest(req,env){
   if(!Number.isSafeInteger(total)||total<1)return err("إجمالي الطلب غير صالح.");
   try{
    const token=await paypalToken(env),order=await paypalFetch(env,"/v2/checkout/orders",token,{intent:"CAPTURE",purchase_units:[{reference_id:crypto.randomUUID(),custom_id:crypto.randomUUID(),description:"Mushmore order: "+snapshot.map(x=>x.sku||x.id).join(", ").slice(0,120),amount:{currency_code:"EUR",value:(total/100).toFixed(2)}}],payment_source:{paypal:{experience_context:{brand_name:"Mushmore",shipping_preference:"NO_SHIPPING",user_action:"PAY_NOW"}}}});
-   await env.DB.prepare("INSERT INTO store_paypal_payments(paypal_order_id,customer_email,items_json,amount_cents,currency,status) VALUES(?,?,?,?,?,'created')").bind(order.id,email,JSON.stringify(snapshot),total,"EUR").run();
+   await env.DB.prepare("INSERT INTO store_paypal_payments(paypal_order_id,customer_email,items_json,amount_cents,currency,status,buyer_latitude,buyer_longitude) VALUES(?,?,?,?,?,'created',?,?)").bind(order.id,email,JSON.stringify(snapshot),total,"EUR",Number.isFinite(lat)&&lat>=-90&&lat<=90?lat:null,Number.isFinite(lng)&&lng>=-180&&lng<=180?lng:null).run();
    return json({id:order.id,status:order.status},201);
   }catch(e){return err(e.message||"تعذر إنشاء دفعة PayPal.",502);}
  }
@@ -62,7 +62,7 @@ export async function handlePaypalRequest(req,env){
    }
    const id=crypto.randomUUID(),number="MM-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,4).toUpperCase(),total=payment.amount_cents;
    try{
-    await env.DB.prepare("INSERT INTO store_orders(id,order_number,customer_name,customer_email,customer_phone,shipping_address,shipping_city,shipping_postcode,shipping_country,items_json,subtotal_cents,shipping_cents,total_cents,currency,payment_method,payment_status,order_status) VALUES(?,?,?,?,'','','','','',?,?,0,?,'EUR','online','paid','new')").bind(id,number,email,email,JSON.stringify(items),total,total).run();
+    await env.DB.prepare("INSERT INTO store_orders(id,order_number,customer_name,customer_email,customer_phone,shipping_address,shipping_city,shipping_postcode,shipping_country,items_json,subtotal_cents,shipping_cents,total_cents,currency,payment_method,payment_status,order_status,buyer_latitude,buyer_longitude) VALUES(?,?,?,?,'','','','','',?,?,0,?,'EUR','online','paid','new',?,?)").bind(id,number,email,email,JSON.stringify(items),total,total,payment.buyer_latitude,payment.buyer_longitude).run();
     await env.DB.prepare("UPDATE store_paypal_payments SET status='completed',order_id=?,updated_at=CURRENT_TIMESTAMP WHERE paypal_order_id=?").bind(id,paypalId).run();
    }catch(e){for(const x of updates)await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(x.q,x.id).run();for(const x of warehouseUpdates)await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+? WHERE product_id=? AND warehouse_id=?").bind(x.q,x.id,x.w).run();throw e;}
    return json({success:true,orderNumber:number,total:total/100,currency:"EUR"});
