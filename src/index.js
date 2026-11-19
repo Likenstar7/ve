@@ -13,7 +13,7 @@ function json(data, status = 200, origin = ALLOWED_ORIGIN) {
     headers: {
       "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": origin,
-      "access-control-allow-methods": "GET, POST, OPTIONS",
+      "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
       "access-control-allow-headers": "Content-Type, Authorization",
       "access-control-max-age": "86400",
       "vary": "Origin",
@@ -196,7 +196,7 @@ export default {
         headers: {
           "access-control-allow-origin": origin,
           "access-control-allow-methods": "GET, POST, OPTIONS",
-          "access-control-allow-headers": "Content-Type",
+          "access-control-allow-headers": "Content-Type, Authorization",
           "access-control-max-age": "86400",
           "vary": "Origin"
         }
