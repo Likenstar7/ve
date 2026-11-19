@@ -203,13 +203,14 @@ export default {
       });
     }
 
-    if (!origin) return new Response("Forbidden", { status: 403 });
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/store/")) return handleStoreRequest(request, env);
-
+    // Public health check: allow direct browser visits without an Origin header.
     if (request.method === "GET" && url.pathname === "/health") {
-      return json({ ok: true, service: "mushmore-auth" }, 200, origin);
+      return json({ ok: true, service: "mushmore-auth" }, 200, origin || ALLOWED_ORIGIN);
     }
+
+    if (!origin) return new Response("Forbidden", { status: 403 });
+    if (url.pathname.startsWith("/store/")) return handleStoreRequest(request, env);
     if (request.method === "POST" && url.pathname === "/send-code") {
       return sendCode(request, env, origin);
     }
