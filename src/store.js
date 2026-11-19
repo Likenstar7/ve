@@ -57,7 +57,7 @@ async function requireAdmin(request, env) {
 }
 function productRow(row) {
   return {
-    id: row.id, title: row.title, slug: row.slug, description: row.description,
+    id: row.id, title: row.title, slug: row.slug, sku: row.sku || "", sellerId: row.seller_id || null, productType: row.product_type || "physical", description: row.description,
     category: row.category, imageUrl: row.image_url,
     price: row.price_cents / 100,
     compareAtPrice: row.compare_at_cents == null ? null : row.compare_at_cents / 100,
@@ -95,6 +95,8 @@ async function adminProducts(request, env, method, id) {
   const stock = int(data.stock, 0, 1000000);
   if (!title || price === null || stock === null) return fail("أدخل اسم المنتج والسعر بالم سنت والمخزون بشكل صحيح.");
   const slug = slugify(data.slug || title) || crypto.randomUUID();
+  const sku = cleanText(data.sku, 80).toUpperCase();
+  const productType = data.productType === "digital" ? "digital" : "physical";
   const fields = [
     cleanText(data.description, 5000), cleanText(data.category, 80),
     cleanText(data.imageUrl, 1000), price,
@@ -103,14 +105,14 @@ async function adminProducts(request, env, method, id) {
   ];
   if (fields[4] === null && data.compareAtCents != null && data.compareAtCents !== "") return fail("سعر المقارنة غير صالح.");
   if (id && method === "PUT") {
-    await env.DB.prepare(`UPDATE store_products SET title=?, slug=?, description=?, category=?, image_url=?, price_cents=?, compare_at_cents=?, stock=?, active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
-      .bind(title, slug, ...fields, id).run();
+    await env.DB.prepare(`UPDATE store_products SET title=?, slug=?, description=?, category=?, image_url=?, price_cents=?, compare_at_cents=?, stock=?, active=?, sku=?, product_type=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+      .bind(title, slug, ...fields, sku || null, productType, id).run();
     return response({ success: true, id });
   }
   const newId = crypto.randomUUID();
   try {
-    await env.DB.prepare(`INSERT INTO store_products (id,title,slug,description,category,image_url,price_cents,compare_at_cents,stock,active) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-      .bind(newId, title, slug, ...fields).run();
+    await env.DB.prepare(`INSERT INTO store_products (id,title,slug,description,category,image_url,price_cents,compare_at_cents,stock,active,sku,product_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(newId, title, slug, ...fields, sku || null, productType).run();
   } catch (e) { return fail("تعذر حفظ المنتج. تحقق من عدم تكرار الرابط المختصر.", 409); }
   return response({ success: true, id: newId }, 201);
 }
