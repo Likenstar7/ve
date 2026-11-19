@@ -1,5 +1,4 @@
 import { handleStoreRequest } from "./store.js";
-import { handleFulfillment } from "./fulfillment.js";
 
 const ALLOWED_ORIGIN = "https://mushmoreby.blogspot.com";
 const OTP_TTL_SECONDS = 300;
@@ -206,7 +205,6 @@ export default {
 
     if (!origin) return new Response("Forbidden", { status: 403 });
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/store/sellers/") || url.pathname.startsWith("/store/seller/") || url.pathname.startsWith("/store/admin/sellers") || url.pathname.startsWith("/store/admin/carriers") || url.pathname.startsWith("/store/track/")) return handleFulfillment(request, env);
     if (url.pathname.startsWith("/store/")) return handleStoreRequest(request, env);
 
     if (request.method === "GET" && url.pathname === "/health") {
