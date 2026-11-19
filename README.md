@@ -69,3 +69,50 @@ The store API is served by the same Worker and D1 database as the OTP service.
 Prices are stored as integer euro cents. The first checkout release supports cash on delivery and manual bank transfer. Card payments are intentionally not shown as enabled until a payment provider and merchant account are configured. Product image URLs are accepted; image upload storage is a later R2 integration.
 
 Admin routes verify the Firebase ID token with Firebase Identity Toolkit and then allow only UIDs listed in `ADMIN_UIDS`. The Blogger page must send the current Firebase ID token in the Authorization header.
+
+## Mushmore Marketplace Phase 2
+
+The Blogger storefront UI is in `blogger/mushmore-store-page-v2.html`. Paste its contents into a new Blogger Page using HTML view. It provides a slide-out cart, checkout modal, public order tracking, seller application, and admin panels for products/SKU, orders, sellers, warehouses, and carrier records.
+
+### New D1 migration
+
+Run this after deployment or before using the new endpoints:
+
+```bash
+npx wrangler d1 migrations apply mushmore-auth-db --remote
+```
+
+Migration `0003_marketplace.sql` adds:
+- Seller applications and approval states.
+- Multiple warehouses and per-warehouse inventory.
+- Product SKU and physical/digital product type.
+- Carrier directory, shipment records, tracking events, and digital delivery records.
+
+Checkout now allocates physical inventory across available warehouse records. Existing stock is copied into a default warehouse by the migration. Keep warehouse quantities maintained when adding stock.
+
+### New endpoints
+
+- `POST /store/sellers/apply` — signed-in customer applies to become a seller.
+- `GET /store/admin/sellers`, `PATCH /store/admin/sellers/:id` — admin seller approval/status and commission basis points.
+- `GET|POST /store/admin/warehouses` — list/create warehouses.
+- `PUT /store/admin/warehouses/stock` — set a product's quantity in a warehouse.
+- `GET|POST /store/admin/carriers` — list/register carrier records and tracking URL templates.
+- `POST /store/admin/shipments` — create a shipment and attach tracking to an order.
+- `GET /store/track/:orderNumber` — public tracking summary.
+- `GET|POST /store/seller/products` — approved sellers list/create their own products.
+
+### Carrier integration status
+
+The carrier directory accepts manual tracking, direct-API and shipping-aggregator carrier types. Registering a carrier creates its directory/tracking record; it does **not** by itself establish an API connection. Live label purchase, rate quotes, automatic tracking webhooks and carrier credentials still require a configured provider integration (for example, a supported shipping aggregator) and secrets stored in Cloudflare Worker settings. Do not put carrier API keys in Blogger or GitHub.
+
+### Digital products
+
+Products can be marked `digital` in the catalog. The current storefront supports the product type field, but automated secure file delivery, expiring download links and per-order entitlement delivery are not yet wired to checkout. Do not publish private download URLs until that delivery flow is implemented.
+
+### Important deployment steps
+
+1. Apply D1 migration `0003_marketplace.sql` remotely.
+2. Confirm Worker variables `FIREBASE_API_KEY` and `ADMIN_UIDS` are configured.
+3. Deploy the Worker from the connected GitHub repository.
+4. Paste `blogger/mushmore-store-page-v2.html` into a Blogger Page.
+5. Test checkout, stock deduction, seller application, admin approval, warehouse stock and manual tracking before accepting live orders.
