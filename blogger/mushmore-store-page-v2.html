@@ -26,7 +26,38 @@
 #mushmore-v2 th,#mushmore-v2 td{text-align:right;padding:10px;border-bottom:1px solid var(--line)}#mushmore-v2 .tablewrap{overflow:auto}
 #mushmore-v2 .notice{font-size:13px;line-height:1.8;margin-top:10px;color:#a33}#mushmore-v2 .notice.ok{color:#16834a}
 @media(max-width:620px){#mushmore-v2 .formgrid{grid-template-columns:1fr}#mushmore-v2 .full{grid-column:auto}#mushmore-v2 h1{font-size:22px}}
-</style>
+
+/* Compatibility layer: isolate the storefront from Blogger theme rules */
+#mushmore-v2{display:block!important;width:100%!important;max-width:1240px!important;margin:0 auto!important;padding:clamp(12px,2.5vw,28px)!important;background:#f7f8fc!important;color:#182235!important;text-align:initial!important;direction:rtl!important;line-height:1.6!important}
+#mushmore-v2 [hidden]{display:none!important}
+#mushmore-v2 .top{display:flex!important;align-items:center!important;justify-content:space-between!important;background:#fff!important;border:1px solid #e7ebf2!important;border-radius:18px!important;padding:18px!important}
+#mushmore-v2 .grid{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr))!important;gap:18px!important;align-items:stretch!important}
+#mushmore-v2 .product{display:flex!important;flex-direction:column!important;min-width:0!important;box-shadow:0 5px 20px #1822350a!important}
+#mushmore-v2 .product img{display:block!important;width:100%!important;height:210px!important;object-fit:contain!important;padding:8px!important}
+#mushmore-v2 .pbody{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important}
+#mushmore-v2 .pbody button{width:100%!important;margin-top:auto!important}
+#mushmore-v2 .panel{display:block!important;background:#fff!important;color:#182235!important}
+#mushmore-v2 button{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;min-height:42px!important;text-decoration:none!important;box-shadow:none!important}
+#mushmore-v2 input,#mushmore-v2 select,#mushmore-v2 textarea{display:block!important;max-width:100%!important;min-height:44px!important;color:#182235!important;background:#fff!important}
+#mushmore-v2 input::placeholder,#mushmore-v2 textarea::placeholder{color:#8792a5!important;opacity:1!important}
+#mushmore-v2 .shade{display:block!important;position:fixed!important;inset:0!important;z-index:99998!important;background:rgba(12,18,32,.55)!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+#mushmore-v2 .drawer{display:block!important;position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;width:min(440px,94vw)!important;height:100dvh!important;z-index:99999!important;background:#fff!important;color:#182235!important;transform:translateX(110%)!important;visibility:hidden!important;transition:transform .25s ease,visibility .25s ease!important;padding:22px!important;overflow-y:auto!important}
+#mushmore-v2.open .shade{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+#mushmore-v2.open .drawer{transform:translateX(0)!important;visibility:visible!important}
+#mushmore-v2 .modal{display:none!important;position:fixed!important;inset:0!important;z-index:100000!important;background:rgba(12,18,32,.62)!important;align-items:center!important;justify-content:center!important;padding:14px!important}
+#mushmore-v2 .modal.show{display:flex!important}
+#mushmore-v2 .modalbox{display:block!important;width:min(650px,100%)!important;background:#fff!important;color:#182235!important;border-radius:18px!important}
+#mushmore-v2 .formgrid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}
+#mushmore-v2 .full{grid-column:1/-1!important}
+#mushmore-v2 .tabs{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+#mushmore-v2 .tab{display:none!important}
+#mushmore-v2 .tab.active{display:block!important}
+#mushmore-v2 .tablewrap{display:block!important;max-width:100%!important;overflow:auto!important}
+#mushmore-v2 .price{display:block!important;color:#2857d9!important;font-weight:850!important}
+#mushmore-v2 .muted{color:#69778e!important}
+#mushmore-v2 a{color:#2857d9!important}
+@media(max-width:640px){#mushmore-v2{padding:10px!important}#mushmore-v2 .top{align-items:stretch!important}#mushmore-v2 .search{width:100%!important}#mushmore-v2 .formgrid{grid-template-columns:minmax(0,1fr)!important}#mushmore-v2 .full{grid-column:auto!important}#mushmore-v2 .product img{height:180px!important}}
+\n</style>
 <div class="top"><div><h1>Mushmore</h1><div class="muted">متجر عالمي • منتجات مادية ورقمية • EUR</div></div>
 <div class="tools"><input id="mm2-search" class="search" placeholder="ابحث عن منتج..."><button id="mm2-open-cart">السلة (<span id="mm2-count">0</span>)</button></div></div>
 <div id="mm2-products" class="grid"><p class="muted">جارٍ تحميل المنتجات...</p></div>
