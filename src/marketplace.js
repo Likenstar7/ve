@@ -59,7 +59,8 @@ export async function handleMarketplaceRequest(req,env){
    catch{return error("تعذر إضافة المنتج؛ تحقق من أن SKU غير مستخدم.",409)}
    return json({success:true,id},201);
  }
-\n if(p==="/store/seller/me"&&m==="GET"){
+\n await env.DB.prepare("INSERT OR REPLACE INTO store_warehouse_stock(product_id,warehouse_id,quantity,reserved) VALUES(?,?,?,0)").bind(id,"wh-default",stock).run();
+ if(p==="/store/seller/me"&&m==="GET"){
    const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
    return json({seller:{id:s.store.id,storeName:s.store.store_name,status:s.store.status,commissionBps:s.store.commission_bps}});
  }
