@@ -61,6 +61,69 @@ export async function handleMarketplaceRequest(req,env){
    return json({success:true,id},201);
  }
 
+
+ // Seller USDT wallet management. Wallet addresses are public identifiers; never request private keys.
+ if(p==="/store/seller/wallets"&&(m==="GET"||m==="POST")){
+   const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
+   if(m==="GET"){const r=await env.DB.prepare("SELECT id,asset,network,wallet_address,label,status,created_at FROM store_seller_wallets WHERE seller_id=? ORDER BY created_at DESC").bind(s.store.id).all();return json({wallets:r.results||[]});}
+   const d=await body(req),network=text(d&&d.network,20).toUpperCase(),address=text(d&&d.address,180),label=text(d&&d.label,80);
+   if(!["TRC20","ERC20","BEP20","POLYGON","ARBITRUM"].includes(network)||address.length<20||address.length>180)return error("اختر شبكة مدعومة وأدخل عنوان محفظة صحيحاً مبدئياً.");
+   const id=crypto.randomUUID();try{await env.DB.prepare("INSERT INTO store_seller_wallets(id,seller_id,network,wallet_address,label,status) VALUES(?,?,?,?,?,'pending')").bind(id,s.store.id,network,address,label).run();}catch{return error("هذه المحفظة مسجلة مسبقاً أو البيانات غير صالحة.",409);}
+   return json({success:true,walletId:id,status:"pending",message:"أضيفت المحفظة وتحتاج إلى التحقق قبل استخدامها."},201);
+ }
+ if(p==="/store/seller/earnings"&&m==="GET"){
+   const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
+   const r=await env.DB.prepare("SELECT currency,COALESCE(SUM(CASE WHEN status='available' AND entry_type IN ('sale_credit','adjustment_credit') THEN amount_cents WHEN status='available' AND entry_type IN ('refund_debit','payout_debit','adjustment_debit') THEN -amount_cents ELSE 0 END),0) AS available_cents FROM store_seller_ledger WHERE seller_id=? GROUP BY currency").bind(s.store.id).all();
+   const payouts=await env.DB.prepare("SELECT id,amount_cents,source_currency,payout_asset,network,status,compliance_status,txid,created_at,paid_at FROM store_seller_payouts WHERE seller_id=? ORDER BY created_at DESC LIMIT 50").bind(s.store.id).all();
+   return json({balances:r.results||[],payouts:payouts.results||[]});
+ }
+ if(p==="/store/seller/payouts"&&m==="POST"){
+   const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
+   if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("طلبات السحب متوقفة حتى اكتمال اعتماد الامتثال ومزود التحويل.",503);
+   const d=await body(req),walletId=text(d&&d.walletId,80),amount=Math.floor(Number(d&&d.amountCents)),key=text(d&&d.idempotencyKey,100);
+   if(!walletId||!Number.isSafeInteger(amount)||amount<100||!key)return error("حدد محفظة موثقة ومبلغاً صالحاً ومفتاح طلب فريداً.");
+   const w=await env.DB.prepare("SELECT * FROM store_seller_wallets WHERE id=? AND seller_id=? AND status='verified'").bind(walletId,s.store.id).first();
+   if(!w)return error("المحفظة غير موثقة أو لا تخص هذا البائع.",403);
+   const bal=await env.DB.prepare("SELECT COALESCE(SUM(CASE WHEN entry_type IN ('sale_credit','adjustment_credit') THEN amount_cents ELSE -amount_cents END),0) AS n FROM store_seller_ledger WHERE seller_id=? AND currency='EUR' AND status='available'").bind(s.store.id).first();
+   const queued=await env.DB.prepare("SELECT COALESCE(SUM(amount_cents),0) AS n FROM store_seller_payouts WHERE seller_id=? AND source_currency='EUR' AND status IN ('requested','under_review','approved','processing')").bind(s.store.id).first();
+   if(amount>Number(bal.n)-Number(queued.n))return error("المبلغ يتجاوز رصيدك المتاح بعد احتساب طلبات السحب القائمة.",409);
+   const id=crypto.randomUUID();
+   try{await env.DB.prepare("INSERT INTO store_seller_payouts(id,seller_id,wallet_id,amount_cents,network,idempotency_key) VALUES(?,?,?,?,?,?)").bind(id,s.store.id,walletId,amount,w.network,key).run();}catch{return error("مفتاح الطلب مستخدم أو تعذر إنشاء الطلب.",409);}
+   return json({success:true,payoutId:id,status:"requested",message:"تم تسجيل الطلب وسيخضع لمراجعة الامتثال وموافقة الإدارة."},201);
+ }
+ if(p==="/store/admin/payouts"&&m==="GET"){
+   if(!await admin(req,env))return error("غير مصرح.",401);
+   const r=await env.DB.prepare("SELECT p.*,s.store_name,s.email,w.wallet_address,w.label AS wallet_label FROM store_seller_payouts p JOIN store_sellers s ON s.id=p.seller_id JOIN store_seller_wallets w ON w.id=p.wallet_id ORDER BY p.created_at DESC LIMIT 200").all();
+   return json({payouts:r.results||[]});
+ }
+ match=p.match(/^\\/store\\/admin\\/payouts\\/([a-zA-Z0-9-]+)$/);
+ if(match&&m==="PATCH"){
+   const a=await admin(req,env);if(!a)return error("غير مصرح.",401);
+   const d=await body(req),action=text(d&&d.action,20),note=text(d&&d.note,1000);
+   const pyo=await env.DB.prepare("SELECT * FROM store_seller_payouts WHERE id=?").bind(match[1]).first();if(!pyo)return error("طلب السحب غير موجود.",404);
+   if(action==="verify_wallet"){
+     const r=await env.DB.prepare("UPDATE store_seller_wallets SET status='verified',verified_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND seller_id=? AND status='pending'").bind(pyo.wallet_id,pyo.seller_id).run();
+     if(!r.meta?.changes)return error("تعذر توثيق المحفظة.",409);
+     await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'wallet_verified',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
+     return json({success:true});
+   }
+   if(action==="approve"){
+     if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true")return error("لا يمكن الموافقة قبل تفعيل ضوابط الامتثال ومزود التحويل.",403);
+     if(pyo.status!=="requested"&&pyo.status!=="under_review")return error("حالة الطلب لا تسمح بالموافقة.",409);
+     if(pyo.compliance_status!=="cleared")return error("يجب إكمال فحص الامتثال وتسجيل compliance_status=cleared أولاً.",403);
+     await env.DB.prepare("UPDATE store_seller_payouts SET status='approved',reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,compliance_note=? WHERE id=?").bind(a.uid,note,pyo.id).run();
+     await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'approved',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
+     return json({success:true,status:"approved",message:"تمت الموافقة. ينتظر الطلب تنفيذ مزود التحويل المعتمد؛ لم يتم إرسال USDT بعد."});
+   }
+   if(action==="reject"){
+     if(!["requested","under_review","approved"].includes(pyo.status))return error("حالة الطلب لا تسمح بالرفض.",409);
+     await env.DB.prepare("UPDATE store_seller_payouts SET status='rejected',reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,compliance_note=? WHERE id=?").bind(a.uid,note,pyo.id).run();
+     await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'rejected',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
+     return json({success:true,status:"rejected"});
+   }
+   return error("الإجراء غير مدعوم.");
+ }
+
  if(p==="/store/seller/me"&&m==="GET"){
    const s=await seller(req,env);if(!s)return error("حساب البائع غير معتمد أو غير مسجل.",403);
    return json({seller:{id:s.store.id,storeName:s.store.store_name,status:s.store.status,commissionBps:s.store.commission_bps}});
