@@ -131,3 +131,33 @@ The browser receives only the client ID. The secret remains in Worker Secrets. C
 Buyer location is optional and requested through browser geolocation permission. Seller coordinates are captured when a seller submits their application. Distance labels and radius filtering are approximate straight-line distances, not courier route distances.
 
 Physical delivery still needs a shipping address and a connected carrier/fulfillment workflow before an order can be dispatched. The current minimal checkout records email, SKU/items, payment status and optional buyer coordinates; it does not yet collect a full delivery address or calculate live shipping rates.
+
+
+## Seller earnings and USDT payouts (Phase 3)
+
+Migration `0006_seller_payouts.sql` adds seller wallet records for USDT on TRC20, ERC20, BEP20, Polygon and Arbitrum; an EUR-denominated seller earnings ledger; payout requests; compliance status; and an immutable-style audit trail. Seller earnings are credited from captured PayPal orders after the product seller commission is applied.
+
+### Safety and activation gates
+
+Payout requests are disabled by default. Do not enable them until the operating entity has obtained legal advice on its Canadian and destination-country obligations, completed any required FINTRAC registration and AML/KYC program, assessed Retail Payment Activities Act obligations with the Bank of Canada, and contracted a suitable regulated payout/virtual-asset provider. FINTRAC identifies payment services between buyers and third-party sellers and virtual-currency transfer/remittance as potentially regulated activities. The Bank of Canada also says a marketplace receiving buyer funds in an account it owns or controls as part of the flow to third-party sellers may be a payment service provider under the RPAA.
+
+Only after counsel/compliance sign-off should the Worker variables `PAYOUTS_ENABLED=true` and `PAYOUT_COMPLIANCE_CLEARED=true` be configured. These flags are deployment gates, not a legal determination or regulatory approval.
+
+### Payout workflow
+
+1. Approved seller registers a public wallet address and chooses a network. Never collect seed phrases or private keys.
+2. Admin verifies wallet ownership/network out of band.
+3. Seller submits a payout request in EUR; available balance is checked and open payout requests are reserved against duplicate requests.
+4. Admin records compliance review and evidence reference, then approves or rejects.
+5. Approval is a workflow state only. It does **not** broadcast USDT. A contracted provider adapter, its API contract, KYB/KYC checks, sanctions screening, Travel Rule handling where applicable, FX quote, fees, confirmations, reconciliation and failure/reversal handling must be implemented before automatic transfers can be enabled.
+6. Store provider reference and transaction hash (TXID) and reconcile independently before marking a payout paid.
+
+The current payout implementation is a controlled ledger and review queue, not a live crypto transfer service. It does not custody keys, exchange EUR to USDT, calculate a guaranteed exchange rate, or send blockchain transactions. Balances are recorded in EUR cents; an FX quote and provider settlement must be added before USDT amount is displayed as final. Refunds, chargebacks, reserves and seller disputes also need to be connected to ledger reversals/holds before production.
+
+### Important legal references
+
+- FINTRAC MSB scope and registration: https://fintrac-canafe.canada.ca/msb-esm/msb-eng
+- FINTRAC MSB registration checker: https://fintrac-canafe.canada.ca/msb-esm/questions/2-eng
+- FINTRAC Travel Rule: https://fintrac-canafe.canada.ca/guidance-directives/transaction-operation/travel-acheminement/1-eng.php
+- Bank of Canada marketplace PSP/RPAA policy: https://www.bankofcanada.ca/2025/12/supervisory-policy-for-online-marketplaces/
+- PayPal Canada Checkout setup requires a Business account: https://www.paypal.com/ca/business/accept-payments/checkout/integration
