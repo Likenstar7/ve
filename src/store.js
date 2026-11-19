@@ -107,6 +107,9 @@ async function adminProducts(request, env, method, id) {
   if (id && method === "PUT") {
     await env.DB.prepare(`UPDATE store_products SET title=?, slug=?, description=?, category=?, image_url=?, price_cents=?, compare_at_cents=?, stock=?, active=?, sku=?, product_type=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`)
       .bind(title, slug, ...fields, sku || null, productType, id).run();
+    const otherWarehouses = await env.DB.prepare("SELECT COALESCE(SUM(quantity),0) AS n FROM store_warehouse_stock WHERE product_id=? AND warehouse_id<>?").bind(id,"wh-default").first();
+    const defaultQty = Math.max(0, stock - Number(otherWarehouses && otherWarehouses.n || 0));
+    await env.DB.prepare("INSERT INTO store_warehouse_stock(product_id,warehouse_id,quantity,reserved) VALUES(?,?,?,0) ON CONFLICT(product_id,warehouse_id) DO UPDATE SET quantity=excluded.quantity,updated_at=CURRENT_TIMESTAMP").bind(id,"wh-default",defaultQty).run();
     return response({ success: true, id });
   }
   const newId = crypto.randomUUID();
