@@ -134,6 +134,17 @@ export async function handleMarketplaceRequest(req,env){
      await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'approved',?)").bind(crypto.randomUUID(),pyo.id,a.uid,note).run();
      return json({success:true,status:"approved",message:"تمت الموافقة. ينتظر الطلب تنفيذ مزود التحويل المعتمد؛ لم يتم إرسال USDT بعد."});
    }
+   if(action==="confirm_paid"){
+     if(env.PAYOUTS_ENABLED!=="true"||env.PAYOUT_COMPLIANCE_CLEARED!=="true"||env.PAYOUT_PROVIDER_CONNECTED!=="true")return error("تأكيد التحويل معطل حتى ربط مزود التحويل والتحقق من الامتثال.",403);
+     const txid=text(d&&d.txid,180),providerRef=text(d&&d.providerReference,180);
+     if(!txid)return error("أدخل TXID بعد التحقق من المعاملة على مستكشف الشبكة.");
+     if(pyo.status!=="approved"&&pyo.status!=="processing"&&pyo.status!=="paid")return error("طلب السحب ليس في حالة تسمح بالتأكيد.",409);
+     if(pyo.status==="paid")return json({success:true,status:"paid",message:"تم تسجيل هذا التحويل سابقاً."});
+     await env.DB.prepare("INSERT OR IGNORE INTO store_seller_ledger(id,seller_id,entry_type,amount_cents,currency,status,description,reference) VALUES(?,?, 'payout_debit',?,'EUR','available','USDT payout confirmed',?)").bind(crypto.randomUUID(),pyo.seller_id,pyo.amount_cents,"payout:"+pyo.id).run();
+     await env.DB.prepare("UPDATE store_seller_payouts SET status='paid',txid=?,provider_reference=?,paid_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=? AND status IN ('approved','processing')").bind(txid,providerRef,pyo.id).run();
+     await env.DB.prepare("INSERT INTO store_payout_audit(id,payout_id,actor_uid,action,details) VALUES(?,?,?,'confirmed_paid',?)").bind(crypto.randomUUID(),pyo.id,a.uid,"TXID: "+txid+"; provider: "+providerRef).run();
+     return json({success:true,status:"paid"});
+   }
    if(action==="reject"){
      if(!["requested","under_review","approved"].includes(pyo.status))return error("حالة الطلب لا تسمح بالرفض.",409);
      await env.DB.prepare("UPDATE store_seller_payouts SET status='rejected',reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP,compliance_note=? WHERE id=?").bind(a.uid,note,pyo.id).run();
