@@ -43,3 +43,29 @@ A successful OTP check confirms control of the email address at verification tim
 ## Email sender requirement
 
 Resend requires an authorized sender/domain for production delivery. A test sender is restricted and is not suitable for sending arbitrary OTP messages to all visitors.
+
+## Mushmore store API (EUR)
+
+The store API is served by the same Worker and D1 database as the OTP service.
+
+### Required setup
+
+1. Apply migration: `npx wrangler d1 migrations apply mushmore-auth-db --remote`.
+2. Add Worker variable `FIREBASE_API_KEY` (the public Web API key for the existing Firebase project).
+3. Add Worker variable `ADMIN_UIDS` containing the Firebase UID(s) allowed to manage products and orders, comma-separated. Never use an email address here.
+4. Keep the existing `DB` D1 binding. The Blogger origin is restricted to `https://mushmoreby.blogspot.com`.
+
+### Store routes
+
+- `GET /store/products` — public active products; optional `q`, `category`, and `limit`.
+- `POST /store/orders` — guest or signed-in customer order; server recalculates prices and stock.
+- `GET /store/admin/products` — admin product list.
+- `POST /store/admin/products` — create product.
+- `PUT /store/admin/products/:id` — update product.
+- `DELETE /store/admin/products/:id` — delete product.
+- `GET /store/admin/orders` — list latest orders.
+- `PATCH /store/admin/orders/:id` — update order and payment status.
+
+Prices are stored as integer euro cents. The first checkout release supports cash on delivery and manual bank transfer. Card payments are intentionally not shown as enabled until a payment provider and merchant account are configured. Product image URLs are accepted; image upload storage is a later R2 integration.
+
+Admin routes verify the Firebase ID token with Firebase Identity Toolkit and then allow only UIDs listed in `ADMIN_UIDS`. The Blogger page must send the current Firebase ID token in the Authorization header.
