@@ -1,3 +1,5 @@
+import { handleStoreRequest } from "./store.js";
+
 const ALLOWED_ORIGIN = "https://mushmoreby.blogspot.com";
 const OTP_TTL_SECONDS = 300;
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -203,6 +205,7 @@ export default {
 
     if (!origin) return new Response("Forbidden", { status: 403 });
     const url = new URL(request.url);
+    if (url.pathname.startsWith("/store/")) return handleStoreRequest(request, env);
 
     if (request.method === "GET" && url.pathname === "/health") {
       return json({ ok: true, service: "mushmore-auth" }, 200, origin);
