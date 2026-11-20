@@ -214,7 +214,7 @@ export async function handleMarketplaceRequest(req,env){
  // Customer order history. Only the authenticated owner can read their orders.
  if(p==="/store/account/orders"&&m==="GET"){
    const u=await identity(req,env);if(!u)return error("سجّل الدخول لعرض طلباتك.",401);
-   const r=await env.DB.prepare("SELECT id,order_number,items_json,total_cents,currency,payment_method,payment_status,order_status,shipping_method,tracking_number,tracking_url,created_at,shipped_at,delivered_at FROM store_orders WHERE customer_uid=? ORDER BY created_at DESC LIMIT 100").bind(u.uid).all();
+   const r=await env.DB.prepare("SELECT id,order_number,items_json,total_cents,currency,payment_method,payment_status,order_status,shipping_method,tracking_number,tracking_url,created_at,shipped_at,delivered_at FROM store_orders WHERE customer_uid=? OR lower(customer_email)=? ORDER BY created_at DESC LIMIT 100").bind(u.uid,u.email).all();
    return json({orders:(r.results||[]).map(o=>({id:o.id,orderNumber:o.order_number,items:JSON.parse(o.items_json||"[]"),total:Number(o.total_cents||0)/100,currency:o.currency,paymentMethod:o.payment_method,paymentStatus:o.payment_status,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,createdAt:o.created_at,shippedAt:o.shipped_at,deliveredAt:o.delivered_at}))});
  }
  // Public tracking lookup uses the carrier tracking number only; no buyer details are exposed.
