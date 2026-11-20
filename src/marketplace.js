@@ -202,13 +202,13 @@ export async function handleMarketplaceRequest(req,env){
    await env.DB.prepare("INSERT INTO store_shipment_events(id,shipment_id,status,description,source) VALUES(?,?,'shipped','تم تسليم الشحنة لشركة النقل','manual')").bind(crypto.randomUUID(),id).run();
    return json({success:true,shipmentId:id,trackingUrl:track},201);
  }
- match=p.match(/^\/store\/track\/([a-zA-Z0-9-]+)$/);
+ match=p.match(/^\\/store\\/track\\/([a-zA-Z0-9-]+)$/);
  if(match&&m==="GET"){
-   const o=await env.DB.prepare("SELECT order_number,order_status,shipping_method,tracking_number,tracking_url,shipped_at,delivered_at FROM store_orders WHERE order_number=?").bind(match[1]).first();
-   if(!o)return error("لم يتم العثور على الطلب.",404);
-   const sh=await env.DB.prepare("SELECT id,status,tracking_number,tracking_url,created_at FROM store_shipments WHERE order_id=(SELECT id FROM store_orders WHERE order_number=?) ORDER BY created_at DESC LIMIT 1").bind(match[1]).first();
-   let events=[];if(sh){const r=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC").bind(sh.id).all();events=r.results||[]}
-   return json({orderNumber:o.order_number,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,shippedAt:o.shipped_at,deliveredAt:o.delivered_at,events});
+   const lookup=text(match[1],160);
+   const o=await env.DB.prepare("SELECT o.id,o.order_number,o.order_status,o.shipping_method,o.tracking_number,o.tracking_url,o.shipped_at,o.delivered_at,s.id AS shipment_id,s.status AS shipment_status,s.tracking_number AS shipment_tracking_number,s.tracking_url AS shipment_tracking_url,c.name AS carrier_name FROM store_orders o LEFT JOIN store_shipments s ON s.order_id=o.id LEFT JOIN store_shipping_carriers c ON c.id=s.carrier_id WHERE o.order_number=? OR o.tracking_number=? OR s.tracking_number=? ORDER BY s.created_at DESC LIMIT 1").bind(lookup,lookup,lookup).first();
+   if(!o)return error("لم يتم العثور على الطلب أو رقم التتبع.",404);
+   let events=[];if(o.shipment_id){const r=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC LIMIT 100").bind(o.shipment_id).all();events=r.results||[]}
+   return json({orderNumber:o.order_number,status:o.shipment_status||o.order_status,carrier:o.carrier_name||o.shipping_method||"",trackingNumber:o.shipment_tracking_number||o.tracking_number||"",trackingUrl:o.shipment_tracking_url||o.tracking_url||"",shippedAt:o.shipped_at,deliveredAt:o.delivered_at,events});
  }
 
  // Customer order history. Only the authenticated owner can read their orders.
@@ -218,15 +218,7 @@ export async function handleMarketplaceRequest(req,env){
    return json({orders:(r.results||[]).map(o=>({id:o.id,orderNumber:o.order_number,items:JSON.parse(o.items_json||"[]"),total:Number(o.total_cents||0)/100,currency:o.currency,paymentMethod:o.payment_method,paymentStatus:o.payment_status,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,createdAt:o.created_at,shippedAt:o.shipped_at,deliveredAt:o.delivered_at}))});
  }
  // Public tracking lookup uses the carrier tracking number only; no buyer details are exposed.
- const trackingPrefix="/store/track/";
- if(p.startsWith(trackingPrefix)&&m==="GET"){
-   let trackingNumber="";try{trackingNumber=decodeURIComponent(p.slice(trackingPrefix.length))}catch{return error("رقم التتبع غير صالح.");}
-   trackingNumber=text(trackingNumber,160);if(!trackingNumber||trackingNumber.includes("/"))return error("أدخل رقم التتبع.");
-   const shipment=await env.DB.prepare("SELECT s.id,s.tracking_number,s.tracking_url,s.status,s.shipped_at,s.delivered_at,o.order_number,c.name AS carrier_name FROM store_shipments s JOIN store_orders o ON o.id=s.order_id LEFT JOIN store_shipping_carriers c ON c.id=s.carrier_id WHERE s.tracking_number=? LIMIT 1").bind(trackingNumber).first();
-   if(!shipment)return error("رقم التتبع غير موجود.",404);
-   const events=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC LIMIT 100").bind(shipment.id).all();
-   return json({orderNumber:shipment.order_number,status:shipment.status,carrier:shipment.carrier_name||"",trackingNumber:shipment.tracking_number,trackingUrl:shipment.tracking_url,shippedAt:shipment.shipped_at,deliveredAt:shipment.delivered_at,events:events.results||[]});
- }
+
 
  // Customer wishlist: server-side persistence for signed-in customers.
  if(p==="/store/account/wishlist"&&(m==="GET"||m==="POST"||m==="DELETE")){
