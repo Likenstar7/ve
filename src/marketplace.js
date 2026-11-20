@@ -181,14 +181,21 @@ export async function handleMarketplaceRequest(req,env){
  }
  if(p==="/store/admin/carriers"&&m==="GET"){
    if(!await admin(req,env))return error("غير مصرح.",401);
-   const r=await env.DB.prepare("SELECT id,code,name,website,tracking_url_template,integration_type,enabled FROM store_shipping_carriers ORDER BY name").all();return json({carriers:r.results||[]});
+   const r=await env.DB.prepare("SELECT id,code,name,website,tracking_url_template,integration_type,enabled,config_json FROM store_shipping_carriers ORDER BY name").all();
+   const carriers=(r.results||[]).map(c=>{let config={};try{config=JSON.parse(c.config_json||"{}")}catch{}const binding="CARRIER_"+String(c.code||"").toUpperCase().replace(/[^A-Z0-9]/g,"_")+"_API_KEY";return {...c,apiBaseUrl:config.apiBaseUrl||"",secretBindingName:c.integration_type==="manual"?"":binding,secretConfigured:c.integration_type==="manual"?false:!!env[binding]};});
+   return json({carriers});
  }
  if(p==="/store/admin/carriers"&&m==="POST"){
    if(!await admin(req,env))return error("غير مصرح.",401);
    const d=await body(req),name=text(d&&d.name,120),code=text(d&&d.code,50).toLowerCase(),type=text(d&&d.integrationType,20)||"manual";
-   if(!name||!code||!["manual","aggregator","direct_api"].includes(type))return error("بيانات شركة الشحن غير صالحة.");
-   const id=crypto.randomUUID();try{await env.DB.prepare("INSERT INTO store_shipping_carriers(id,code,name,website,tracking_url_template,integration_type,enabled) VALUES(?,?,?,?,?,?,?)").bind(id,code,name,text(d.website,500),text(d.trackingUrlTemplate,1000),type,d.enabled?1:0).run()}catch{return error("رمز شركة الشحن موجود مسبقاً.",409)}
-   return json({success:true,id},201);
+   if(!name||!code||!/^[a-z0-9_-]{2,50}$/.test(code)||!["manual","aggregator","direct_api"].includes(type))return error("بيانات شركة الشحن غير صالحة.");
+   const apiBaseUrl=text(d&&d.apiBaseUrl,500);
+   if(apiBaseUrl){try{const parsed=new URL(apiBaseUrl);if(parsed.protocol!=="https:")return error("يجب أن يبدأ عنوان API بـ HTTPS.")}catch{return error("عنوان API غير صالح.")}}
+   const binding=type==="manual"?"":"CARRIER_"+code.toUpperCase().replace(/[^A-Z0-9]/g,"_")+"_API_KEY";
+   const config={apiBaseUrl,secretBindingName:binding};
+   const id=crypto.randomUUID(),enabled=type==="manual"&&!!d.enabled?1:0;
+   try{await env.DB.prepare("INSERT INTO store_shipping_carriers(id,code,name,website,tracking_url_template,integration_type,enabled,config_json) VALUES(?,?,?,?,?,?,?,?)").bind(id,code,name,text(d.website,500),text(d.trackingUrlTemplate,1000),type,enabled,JSON.stringify(config)).run()}catch{return error("رمز شركة الشحن موجود مسبقاً.",409)}
+   return json({success:true,id,enabled:!!enabled,secretBindingName:binding,apiBaseUrl},201);
  }
  if(p==="/store/admin/shipments"&&m==="POST"){
    if(!await admin(req,env))return error("غير مصرح.",401);
