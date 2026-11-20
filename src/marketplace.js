@@ -20,7 +20,7 @@ export async function handleMarketplaceRequest(req,env){
  const url=new URL(req.url),p=url.pathname,m=req.method;
  // Mushmore operates from Algeria: do not accept, store, or pay out virtual-asset wallets.
  // Fiat payout rails require a separately approved regulated provider and are not implemented here.
- if (p==="/store/seller/wallets" || p==="/store/seller/payouts" || p==="/store/admin/payouts" || /^\\/store\\/admin\\/(wallets|payouts)\\//.test(p)) {
+ if (p==="/store/seller/wallets" || p==="/store/seller/payouts" || p==="/store/admin/payouts" || p.startsWith("/store/admin/wallets/") || p.startsWith("/store/admin/payouts/")) {
    return error("السحب عبر USDT أو أي أصل افتراضي متوقف. لا تتوفر حالياً قناة صرف نقدية معتمدة؛ لا ترسل عنوان محفظة أو تطلب سحباً حتى اعتماد مزود قانوني.", 410);
  }
  if(!p.startsWith("/store/"))return null;
