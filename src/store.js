@@ -223,8 +223,15 @@ async function adminOrders(request, env, method, id) {
     const allowedStatus = ["new","processing","shipped","completed","cancelled"];
     const allowedPayment = ["pending","paid","refunded","failed"];
     if (!allowedStatus.includes(status) || !allowedPayment.includes(paymentStatus)) return fail("حالة الطلب أو الدفع غير صالحة.");
+    const existing = await env.DB.prepare("SELECT id,customer_uid,customer_email,total_cents,payment_status FROM store_orders WHERE id=?").bind(id).first();
+    if (!existing) return fail("الطلب غير موجود.", 404);
     await env.DB.prepare("UPDATE store_orders SET order_status=?,payment_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?")
       .bind(status,paymentStatus,id).run();
+    if (paymentStatus === "paid" && existing.payment_status !== "paid" && existing.customer_uid) {
+      const rewardPoints = Math.floor(Number(existing.total_cents || 0) / 100);
+      if (rewardPoints > 0) await env.DB.prepare("INSERT OR IGNORE INTO store_loyalty_ledger(id,firebase_uid,customer_email,order_id,points,entry_type,description) VALUES(?,?,?,?,?,'purchase_reward',?)")
+        .bind(crypto.randomUUID(),existing.customer_uid,existing.customer_email,id,rewardPoints,"مكافأة شراء Mushmore المدفوع").run();
+    }
     return response({ success:true });
   }
   return fail("المسار غير موجود.", 404);
