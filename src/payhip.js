@@ -23,6 +23,44 @@ function moneyToMinor(value) {
   return Math.round(n * 100);
 }
 export async function handlePayhipRequest(request, env) {
+  if (new URL(request.url).pathname === "/integrations/payhip/webhook" && request.method === "POST") {
+    if (!env.PAYHIP_WEBHOOK_SIGNATURE) return json({ error: "Payhip webhook signature is not configured." }, 503, "*");
+    let event;
+    try { event = await request.json(); } catch { return json({ error: "Invalid JSON" }, 400, "*"); }
+    const supplied = text(event.signature, 128).toLowerCase();
+    const expected = String(env.PAYHIP_WEBHOOK_SIGNATURE).trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(expected) || supplied.length !== expected.length) return json({ error: "Unauthorized" }, 401, "*");
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ supplied.charCodeAt(i);
+    if (diff !== 0) return json({ error: "Unauthorized" }, 401, "*");
+    if (!env.DB) return json({ error: "Database unavailable" }, 503, "*");
+    const type = text(event.type, 40);
+    const transactionId = text(event.id, 180);
+    const currency = text(event.currency, 3).toUpperCase();
+    const price = Number(event.price);
+    const email = text(event.email, 254).toLowerCase();
+    if (!["paid", "refunded"].includes(type) || !transactionId || !/^[A-Z]{3}$/.test(currency) || !Number.isSafeInteger(price) || price < 0) {
+      return json({ error: "Invalid Payhip transaction payload." }, 400, "*");
+    }
+    const refunded = type === "refunded" ? Math.min(price, Math.max(0, Number.isSafeInteger(Number(event.amount_refunded)) ? Number(event.amount_refunded) : price)) : 0;
+    const status = type === "paid" ? "paid" : refunded >= price ? "refunded" : "partially_refunded";
+    const now = new Date().toISOString();
+    await env.DB.prepare(`INSERT INTO payhip_sales
+      (transaction_id,customer_email,currency,price_minor,refunded_minor,status,items_json,transaction_at,refunded_at,payload_json,created_at,updated_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+      ON CONFLICT(transaction_id) DO UPDATE SET
+      customer_email=excluded.customer_email,currency=excluded.currency,
+      price_minor=excluded.price_minor,refunded_minor=CASE WHEN excluded.status='paid' THEN payhip_sales.refunded_minor ELSE excluded.refunded_minor END,
+      status=CASE WHEN payhip_sales.status IN ('refunded','partially_refunded') AND excluded.status='paid' THEN payhip_sales.status ELSE excluded.status END,
+      items_json=excluded.items_json,transaction_at=COALESCE(payhip_sales.transaction_at,excluded.transaction_at),
+      refunded_at=CASE WHEN excluded.status IN ('refunded','partially_refunded') THEN excluded.refunded_at ELSE payhip_sales.refunded_at END,
+      payload_json=excluded.payload_json,updated_at=excluded.updated_at`)
+      .bind(transactionId,email,currency,price,refunded,status,JSON.stringify(Array.isArray(event.items)?event.items:[]).slice(0,20000),
+        Number.isFinite(Number(event.date))?Math.floor(Number(event.date)):null,
+        type==="refunded"?(Number.isFinite(Number(event.date_refunded))?Math.floor(Number(event.date_refunded)):Math.floor(Date.now()/1000)):null,
+        JSON.stringify(event).slice(0,30000),now,now).run();
+    return json({ success: true, transactionId, status }, 200, "*");
+  }
   const url = new URL(request.url);
   if (url.pathname === "/integrations/payhip/products" && request.method === "POST") {
     const expected = String(env.PAYHIP_ZAPIER_SECRET || "");
