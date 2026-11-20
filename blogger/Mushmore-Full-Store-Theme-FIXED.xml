@@ -4473,10 +4473,26 @@ body[data-theme="dark"] #mushmore-v2,body.darkMode #mushmore-v2,.nB[data-theme="
 #mushmore-v2 .ms-box,#mushmore-v2 .product{box-shadow:0 5px 18px #14251c08}
 @media(max-width:760px){#mushmore-v2 .ms-payhip-grid{grid-template-columns:1fr}#mushmore-v2 .ms-hero{min-height:190px}}
 @media(max-width:600px){#mushmore-v2 .ms-head{padding:12px}#mushmore-v2 .ms-hero{padding:22px 18px}#mushmore-v2 .ms-hero-actions{width:100%}#mushmore-v2 .ms-hero-actions a{flex:1}#mushmore-v2 .ms-payhip-card{gap:12px}#mushmore-v2 .ms-payhip-item{padding:9px}}
+/* Mushmore clean full-width layout */
+body .sideB, body aside.sideB, #side-widget{display:none!important}
+body .mainW, body .mainC, body .mainN{width:100%!important;max-width:100%!important;min-width:0!important}
+body .mainW{grid-template-columns:minmax(0,1fr)!important}
+#mushmore-v2{width:100%!important;max-width:1480px!important;margin:0 auto!important;padding:18px!important}
+#mushmore-v2 .ms-page-nav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;padding:10px 0;border-bottom:1px solid var(--line)}
+#mushmore-v2 .ms-page-nav a{display:inline-flex;align-items:center;justify-content:center;padding:9px 14px;border:1px solid var(--line);border-radius:10px;color:var(--ink);background:#fff;text-decoration:none;font-weight:700;font-size:13px}
+#mushmore-v2 .ms-page-nav a:hover{border-color:var(--brand);color:var(--brand)}
+#mushmore-v2 .ms-page-nav a.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+@media(max-width:640px){#mushmore-v2{padding:12px!important}#mushmore-v2 .ms-page-nav a{flex:1 1 calc(50% - 8px)}}
 </style>
 
 <header class="ms-head"><div class="ms-brand"><span class="ms-logo">M</span><div><b>Mushmore</b><small>اكتشف منتجات من متاجر حول العالم</small></div></div><div class="ms-actions"><label class="ms-search">⌕ <input id="mm2-search" placeholder="ابحث عن منتج أو علامة تجارية..."></label><button class="alt" id="mm2-filter-open">☷ الفلاتر</button><button id="mm2-open-cart">السلة <b id="mm2-count">0</b></button></div></header>
-<section class="ms-hero"><span>MUSHMORE MARKETPLACE</span><h2>تسوّق بذكاء. اكتشف أكثر. واستمتع بتجربة أسهل.</h2><p>وجهتك لاكتشاف منتجات البائعين حول العالم، مع مجموعة Demont الرقمية وتجربة تسوق موحدة.</p><div class="ms-hero-actions"><a href="#mm2-products">استكشف المنتجات</a><a href="#mm-payhip-collection">المنتجات الرقمية</a></div></section>
+<nav class="ms-page-nav" aria-label="تنقل المتجر">
+<a class="primary" href="#mm2-home">المتجر</a>
+<a href="#mm2-seller-page">حساب البائع</a>
+<a href="#mm2-add-product-page" data-mm-open="add">إضافة منتج</a>
+<a href="#mm2-admin-page" data-mm-open="admin">لوحة الإدارة</a>
+</nav>
+<section class="ms-hero" id="mm2-home"><span>MUSHMORE MARKETPLACE</span><h2>تسوّق بذكاء. اكتشف أكثر. واستمتع بتجربة أسهل.</h2><p>وجهتك لاكتشاف منتجات البائعين حول العالم، مع مجموعة Demont الرقمية وتجربة تسوق موحدة.</p><div class="ms-hero-actions"><a href="#mm2-products">استكشف المنتجات</a><a href="#mm-payhip-collection">المنتجات الرقمية</a></div></section>
 <div class="ms-layout"><aside class="ms-side"><section class="ms-box"><h3>التصنيفات</h3><div id="mm3-categories"><button class="active" data-category="">كل المنتجات</button></div></section><section class="ms-box"><h3>تصفية المنتجات</h3><label>نوع المنتج<select id="mm3-type"><option value="">الكل</option><option value="physical">مادي</option><option value="digital">رقمي</option></select></label><label>ترتيب حسب<select id="mm3-sort"><option value="default">الافتراضي</option><option value="price-asc">السعر الأقل</option><option value="price-desc">السعر الأعلى</option><option value="name">الاسم</option></select></label><label class="ms-check"><input id="mm3-stock" type="checkbox"> المتوفر فقط</label><label class="ms-check"><input id="mm3-favs" type="checkbox"> محفوظاتي</label></section><section class="ms-note"><b>تسوق بثقة</b><p>الدفع يتم عبر مزود آمن، ويمكنك تتبع طلبك بعد تأكيده.</p></section></aside><main class="ms-main"><div class="ms-title"><div><small>اكتشف مجموعتنا</small><h2>المنتجات الشائعة</h2></div><span id="mm3-result-count">جارٍ تحميل المنتجات…</span></div><div id="mm2-products" class="grid"><p>جارٍ تحميل المنتجات...</p></div><section class="ms-box ms-payhip ms-payhip-featured" aria-label="المنتج الرقمي المميز من Demont"><div class="ms-title"><div><small>متجر Demont على Payhip</small><h2>منتجات رقمية من متجرك</h2></div><span class="muted">دفع وتسليم آمن عبر Payhip</span></div><article class="ms-payhip-card"><div class="ms-payhip-cover"><span>DEMONT</span><b>منتجات رقمية</b></div><div class="ms-payhip-info"><span class="muted">Payhip • منتج رقمي</span><h3>Vacation Rental Welcome Book | Printable Guest Guide</h3><p class="muted">ملف رقمي قابل للطباعة يساعد أصحاب أماكن الإقامة على تقديم تجربة ترحيب منظمة واحترافية للضيوف.</p><a href="https://payhip.com/b/Qm5Cn" target="_blank" rel="noopener noreferrer" class="payhip-buy-button" data-theme="green" data-product="Qm5Cn">عرض المنتج على Payhip</a></div></article></section>
 <section id="mm-payhip-collection" class="ms-box ms-payhip-library" aria-label="منتجات Demont الرقمية">
   <div class="ms-title"><div><small>DEMONT STORE · PAYHIP</small><h2>اكتشف المجموعة الرقمية</h2></div><span class="muted">ثمانية عروض رقمية من متجرك</span></div>
@@ -4494,11 +4510,11 @@ body[data-theme="dark"] #mushmore-v2,body.darkMode #mushmore-v2,.nB[data-theme="
 <div class="mm3-detail" id="mm3-detail"><div class="mm3-detailbox"><button class="mm3-close" id="mm3-detail-close">إغلاق ✕</button><div id="mm3-detail-content"></div></div></div>
 <div class="ms-checkout" id="ms-checkout"><div class="ms-checkout-box"><div class="ms-checkout-head"><div><small>SECURE CHECKOUT</small><h2>إتمام الطلب</h2><p>راجع المنتجات ثم أكمل الدفع الآمن.</p></div><button class="alt" id="ms-checkout-close">العودة للمتجر</button></div><div class="ms-checkout-grid"><section><h3>ملخص الطلب</h3><div id="ms-checkout-lines"></div><div class="ms-total"><span>الإجمالي</span><b id="ms-checkout-total">€0.00</b></div></section><section><h3>بيانات الإيصال والدفع</h3><div class="ms-buyer-fields"><label>عنوان محفوظ<select id="mm2-saved-address"><option value="">أدخل عنواناً جديداً أو اختر عنواناً محفوظاً</option></select></label><label>الاسم الكامل<input id="mm2-pay-name" autocomplete="name" placeholder="اسم المستلم"></label><label>البريد الإلكتروني<input id="mm2-pay-email" type="email" autocomplete="email" placeholder="name@example.com"></label><label>رقم الهاتف<input id="mm2-pay-phone" type="tel" autocomplete="tel" placeholder="+213..."></label><label>عنوان الشحن<input id="mm2-pay-address" autocomplete="street-address" placeholder="الشارع ورقم المبنى"></label><label>المدينة<input id="mm2-pay-city" autocomplete="address-level2" placeholder="المدينة"></label><label>الرمز البريدي<input id="mm2-pay-postcode" autocomplete="postal-code" placeholder="اختياري"></label><label>رمز البلد (حرفان)<input id="mm2-pay-country" maxlength="2" autocomplete="country" placeholder="DZ"></label></div><label class="ms-check" style="display:flex;align-items:center;gap:8px;margin:8px 0"><input id="mm2-save-address" type="checkbox" style="width:16px"> حفظ هذا العنوان في حسابي</label><p class="muted">للطلبات المادية، أدخل عنواناً صحيحاً ورمز البلد الدولي مثل DZ أو FR. لا تدخل بيانات البطاقة هنا؛ يعالجها PayPal.</p><div id="mm2-pay-summary" hidden></div><div id="mm2-paypal-buttons" style="margin-top:16px;min-height:48px"></div><div id="mm2-pay-status" class="notice"></div><p class="ms-secure">🔒 لا نخزن بيانات البطاقة</p></section></div></div></div>
 
-<div class="panel"><button id="mm2-vendor-open" class="alt">كن بائعاً في Mushmore</button><div id="mm2-vendor-form" hidden style="margin-top:14px"><div class="formgrid"><input id="mm2-v-name" placeholder="اسم المتجر"><input id="mm2-v-phone" placeholder="الهاتف"><input id="mm2-v-country" placeholder="بلد النشاط"><input id="mm2-v-lat" type="hidden"><input id="mm2-v-lng" type="hidden"></div><button id="mm2-v-location" class="alt" type="button">تحديد موقع البائع لحساب المسافة</button><button id="mm2-v-submit" style="margin-top:10px">إرسال طلب الانضمام</button><div id="mm2-v-status" class="notice"></div></div></div>
-<div class="panel"><h2>حساب البائع ومستحقات USDT</h2><p class="muted">هذه المنطقة مخصصة للبائعين المعتمدين. لا تشارك العبارة السرية أو المفتاح الخاص لمحفظتك.</p><div class="formgrid"><select id="mm2-wallet-network"><option value="TRC20">USDT · TRC20 (Tron)</option><option value="ERC20">USDT · ERC20 (Ethereum)</option><option value="BEP20">USDT · BEP20 (BNB Chain)</option><option value="POLYGON">USDT · Polygon</option><option value="ARBITRUM">USDT · Arbitrum</option></select><input id="mm2-wallet-address" placeholder="عنوان محفظة USDT"><input id="mm2-wallet-label" placeholder="اسم المحفظة (اختياري)"></div><button id="mm2-wallet-add" class="alt">إضافة المحفظة</button><button id="mm2-earnings-load" class="alt">تحديث الرصيد والمستحقات</button><div id="mm2-seller-finance-status" class="notice"></div><div id="mm2-seller-balances" class="muted"></div><div class="tablewrap"><table><thead><tr><th>الشبكة</th><th>العنوان</th><th>الحالة</th></tr></thead><tbody id="mm2-wallet-list"></tbody></table></div><h3>طلب سحب</h3><div class="formgrid"><select id="mm2-payout-wallet"></select><input id="mm2-payout-amount" type="number" min="1" step=".01" placeholder="المبلغ باليورو EUR"></div><button id="mm2-payout-request">إرسال طلب السحب</button><div class="muted">يتم تحويل الرصيد إلى USDT بعد التحقق من الهوية والمحفظة، وفحص الامتثال، وموافقة الإدارة وربط مزود تحويل معتمد.</div></div>
-<div class="panel"><button id="mm2-admin-open" class="alt">لوحة الإدارة</button><div id="mm2-admin" hidden>
+<div class="panel" id="mm2-seller-page"><button id="mm2-vendor-open" class="alt">كن بائعاً في Mushmore</button><div id="mm2-vendor-form" hidden style="margin-top:14px"><div class="formgrid"><input id="mm2-v-name" placeholder="اسم المتجر"><input id="mm2-v-phone" placeholder="الهاتف"><input id="mm2-v-country" placeholder="بلد النشاط"><input id="mm2-v-lat" type="hidden"><input id="mm2-v-lng" type="hidden"></div><button id="mm2-v-location" class="alt" type="button">تحديد موقع البائع لحساب المسافة</button><button id="mm2-v-submit" style="margin-top:10px">إرسال طلب الانضمام</button><div id="mm2-v-status" class="notice"></div></div></div>
+<div class="panel" id="mm2-seller-finance"><h2>حساب البائع ومستحقات USDT</h2><p class="muted">هذه المنطقة مخصصة للبائعين المعتمدين. لا تشارك العبارة السرية أو المفتاح الخاص لمحفظتك.</p><div class="formgrid"><select id="mm2-wallet-network"><option value="TRC20">USDT · TRC20 (Tron)</option><option value="ERC20">USDT · ERC20 (Ethereum)</option><option value="BEP20">USDT · BEP20 (BNB Chain)</option><option value="POLYGON">USDT · Polygon</option><option value="ARBITRUM">USDT · Arbitrum</option></select><input id="mm2-wallet-address" placeholder="عنوان محفظة USDT"><input id="mm2-wallet-label" placeholder="اسم المحفظة (اختياري)"></div><button id="mm2-wallet-add" class="alt">إضافة المحفظة</button><button id="mm2-earnings-load" class="alt">تحديث الرصيد والمستحقات</button><div id="mm2-seller-finance-status" class="notice"></div><div id="mm2-seller-balances" class="muted"></div><div class="tablewrap"><table><thead><tr><th>الشبكة</th><th>العنوان</th><th>الحالة</th></tr></thead><tbody id="mm2-wallet-list"></tbody></table></div><h3>طلب سحب</h3><div class="formgrid"><select id="mm2-payout-wallet"></select><input id="mm2-payout-amount" type="number" min="1" step=".01" placeholder="المبلغ باليورو EUR"></div><button id="mm2-payout-request">إرسال طلب السحب</button><div class="muted">يتم تحويل الرصيد إلى USDT بعد التحقق من الهوية والمحفظة، وفحص الامتثال، وموافقة الإدارة وربط مزود تحويل معتمد.</div></div>
+<div class="panel" id="mm2-admin-page"><button id="mm2-admin-open" class="alt">لوحة الإدارة</button><div id="mm2-admin" hidden>
 <div class="tabs"><button class="active" data-tab="products">المنتجات وSKU</button><button data-tab="orders">الطلبات</button><button data-tab="sellers">البائعون</button><button data-tab="warehouses">المستودعات</button><button data-tab="carriers">الشحن</button><button data-tab="payouts">مستحقات USDT</button></div>
-<div class="tab active" data-pane="products"><div class="formgrid">
+<div class="tab active" data-pane="products" id="mm2-add-product-page"><div class="formgrid">
 <input id="mm2-p-title" placeholder="اسم المنتج"><input id="mm2-p-sku" placeholder="SKU فريد">
 <input id="mm2-p-category" placeholder="التصنيف"><input id="mm2-p-price" type="number" min="0" step=".01" placeholder="السعر EUR">
 <input id="mm2-p-stock" type="number" min="0" placeholder="المخزون"><select id="mm2-p-type"><option value="physical">منتج مادي</option><option value="digital">منتج رقمي</option></select>
@@ -4588,7 +4604,38 @@ if(mmAction){sessionStorage.removeItem('mm_account_action');setTimeout(()=>{
 },900);}
 if(sessionStorage.getItem('mm_global_checkout')==='1'){sessionStorage.removeItem('mm_global_checkout');setTimeout(()=>{$('mm2-open-cart').click();setTimeout(()=>$('mm2-checkout-open').click(),350)},900);}
 })();
-</script>]]></b:widget-setting></b:widget-settings><b:includable id='main'><b:if cond='data:view.isHomepage'><data:content/></b:if></b:includable></b:widget>
+</script>
+<script>
+(function(){
+ const root=document.getElementById('mushmore-v2'); if(!root)return;
+ root.querySelectorAll('[data-mm-open]').forEach(function(link){
+  link.addEventListener('click',function(ev){
+   ev.preventDefault();
+   const kind=link.getAttribute('data-mm-open');
+   if(kind==='admin'){
+    const panel=root.querySelector('#mm2-admin');
+    if(panel)panel.hidden=false;
+    const target=root.querySelector('#mm2-admin-page');
+    if(target)target.scrollIntoView({behavior:'smooth',block:'start'});
+   }else if(kind==='add'){
+    const panel=root.querySelector('#mm2-admin');
+    if(panel)panel.hidden=false;
+    const products=root.querySelector('#mm2-add-product-page');
+    if(products)products.scrollIntoView({behavior:'smooth',block:'start'});
+    const addBtn=root.querySelector('#mm2-p-title'); if(addBtn)addBtn.focus({preventScroll:true});
+   }
+  });
+ });
+ root.querySelectorAll('.ms-page-nav a[href="#mm2-seller-page"]').forEach(function(link){
+  link.addEventListener('click',function(ev){
+   ev.preventDefault();
+   const vendor=root.querySelector('#mm2-seller-page');
+   if(vendor)vendor.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+ });
+})();
+</script>
+]]></b:widget-setting></b:widget-settings><b:includable id='main'><b:if cond='data:view.isHomepage'><data:content/></b:if></b:includable></b:widget>
 <b:widget id='Blog1' locked='true' title='Blog Posts' type='Blog' version='2' visible='true'>
                         <b:widget-settings>
                           <b:widget-setting name='showDateHeader'>false</b:widget-setting>
