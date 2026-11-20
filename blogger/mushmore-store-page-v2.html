@@ -134,7 +134,7 @@ const root=document.getElementById('mushmore-v2');if(!root||root.dataset.ready)r
 const API='https://mushmore-auth.lioby198.workers.dev', $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])), money=n=>'€'+Number(n||0).toFixed(2);
 let products=[],cart={},buyerLocation=null,paypalReady=false;try{cart=JSON.parse(localStorage.getItem('mm_store_cart_v2')||'{}')}catch{}
 function msg(id,t,ok){$(id).textContent=t||'';$(id).className='notice'+(ok?' ok':'')}
-function save(){localStorage.setItem('mm_store_cart_v2',JSON.stringify(cart));renderCart()}
+function save(){localStorage.setItem('mm_store_cart_v2',JSON.stringify(cart));window.dispatchEvent(new Event('mm-cart-updated'));renderCart()}
 function openCart(v){root.classList.toggle('open',v)}
 function renderCart(){const rows=Object.entries(cart).filter(([id,q])=>q>0&&products.some(p=>p.id===id));let total=0,count=0;
 $('mm2-cart-lines').innerHTML=rows.map(([id,q])=>{const p=products.find(x=>x.id===id);total+=p.price*q;count+=q;return '<div class="cartrow"><div><b>'+esc(p.title)+'</b><div class="muted">'+money(p.price)+' × '+q+'</div></div><div class="qty"><button data-dec="'+esc(id)+'" class="alt">−</button><b>'+q+'</b><button data-inc="'+esc(id)+'" class="alt">+</button></div></div>'}).join('')||'<p class="muted">سلتك فارغة حالياً.</p>';
