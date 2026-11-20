@@ -27,7 +27,9 @@ export async function handlePayhipRequest(request, env) {
   if (url.pathname === "/integrations/payhip/products" && request.method === "POST") {
     const expected = String(env.PAYHIP_ZAPIER_SECRET || "");
     const auth = request.headers.get("Authorization") || "";
-    const legacyHeader = request.headers.get("PAYHIP_ZAPIER_SECRET") || "";\n    const suppliedRaw = request.headers.get("X-Mushmore-Secret") || auth || legacyHeader;\n    const supplied = suppliedRaw.trim().replace(/^Bearer\\s+/i, "").trim();
+    const legacyHeader = request.headers.get("PAYHIP_ZAPIER_SECRET") || "";
+    const suppliedRaw = request.headers.get("X-Mushmore-Secret") || auth || legacyHeader;
+    const supplied = suppliedRaw.trim().replace(/^Bearer\s+/i, "").trim();
     if (!expected || supplied.length !== expected.length) return json({ error: "Unauthorized" }, 401, "*");
     let match = 0;
     for (let i = 0; i < expected.length; i++) match |= expected.charCodeAt(i) ^ supplied.charCodeAt(i);
