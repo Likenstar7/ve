@@ -244,6 +244,13 @@ export async function handleStoreRequest(request, env) {
   if (!env.DB) return fail("قاعدة بيانات المتجر غير مربوطة.", 503);
   const url = new URL(request.url);
   const method = request.method;
+  if (method === "GET" && url.pathname === "/store/admin/payhip/sales") {
+    const admin = await requireAdmin(request, env);
+    if (!admin) return fail("غير مصرح. سجّل الدخول بحساب المدير.", 401);
+    const result = await env.DB.prepare("SELECT transaction_id,customer_email,currency,price_minor,refunded_minor,status,items_json,transaction_at,refunded_at,created_at FROM payhip_sales ORDER BY COALESCE(transaction_at,0) DESC,created_at DESC LIMIT 200").all();
+    const totals = await env.DB.prepare("SELECT currency,SUM(price_minor) AS gross_minor,SUM(refunded_minor) AS refunded_minor,COUNT(*) AS transactions FROM payhip_sales GROUP BY currency").all();
+    return response({ sales: (result.results || []).map(x => ({ ...x, items: (()=>{try{return JSON.parse(x.items_json)}catch{return []}})() })), totals: totals.results || [] });
+  }
   if (method === "GET" && url.pathname === "/store/account/loyalty") {
     const user = await verifyFirebaseToken(request, env);
     if (!user) return fail("سجّل الدخول لعرض نقاط المكافآت.", 401);
