@@ -63,7 +63,7 @@ async function sendCode(request, env, origin) {
   const productionSenderReady =
     env.RESEND_DOMAIN_VERIFIED === "true" &&
     !!normalizeEmail(fromAddress) &&
-    !/@resend\\.dev$/i.test(fromAddress);
+    !fromAddress.toLowerCase().endsWith("@resend.dev");
   const sender = productionSenderReady
     ? configuredFrom
     : "Mushmore <onboarding@resend.dev>";
