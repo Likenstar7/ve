@@ -58,17 +58,29 @@ function getClientIp(request) {
 }
 
 async function sendCode(request, env, origin) {
-  if (!env.DB || !env.RESEND_API_KEY || !env.OTP_PEPPER || !env.RESEND_TEST_TO_EMAIL) {
-    return json({ error: "الخدمة غير مكتملة الإعداد. يرجى مراجعة إعدادات Worker." }, 503, origin);
+  const configuredFrom = String(env.RESEND_FROM_EMAIL || "").trim();
+  const fromAddress = configuredFrom.match(/<([^>]+)>/)?.[1] || configuredFrom;
+  const productionSenderReady =
+    env.RESEND_DOMAIN_VERIFIED === "true" &&
+    !!normalizeEmail(fromAddress) &&
+    !/@resend\\.dev$/i.test(fromAddress);
+  const sender = productionSenderReady
+    ? configuredFrom
+    : "Mushmore <onboarding@resend.dev>";
+
+  if (!env.DB || !env.RESEND_API_KEY || !env.OTP_PEPPER ||
+      (!productionSenderReady && !env.RESEND_TEST_TO_EMAIL)) {
+    return json({ error: "الخدمة غير مكتملة الإعداد. للتحقق العام، تحقق من نطاق الإرسال في Resend واضبط RESEND_FROM_EMAIL وRESEND_DOMAIN_VERIFIED=true." }, 503, origin);
   }
 
   let body;
   try { body = await request.json(); } catch { return json({ error: "طلب غير صالح." }, 400, origin); }
   const email = normalizeEmail(body.email);
   const testRecipient = normalizeEmail(env.RESEND_TEST_TO_EMAIL);
-  if (!testRecipient) return json({ error: "إعداد بريد الاختبار غير صحيح." }, 503, origin);
   if (!email) return json({ error: "يرجى إدخال بريد إلكتروني صحيح." }, 400, origin);
-  if (email !== testRecipient) return json({ error: "وضع الاختبار يسمح بالإرسال إلى بريد حساب Resend المحدد فقط." }, 403, origin);
+  if (!productionSenderReady && (!testRecipient || email !== testRecipient)) {
+    return json({ error: "وضع الاختبار يسمح بالإرسال إلى بريد حساب Resend المحدد فقط. تحقق من نطاق الإرسال لتفعيل تسجيل جميع المستخدمين." }, 403, origin);
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const ipHash = await sha256(env.OTP_PEPPER + ":" + getClientIp(request));
@@ -118,7 +130,7 @@ async function sendCode(request, env, origin) {
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      from: "Mushmore <onboarding@resend.dev>",
+      from: sender,
       to: [email],
       subject: "رمز التحقق - Mushmore",
       html: `<div style="font-family:Arial,sans-serif;direction:rtl;text-align:center">
