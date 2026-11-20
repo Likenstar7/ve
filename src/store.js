@@ -244,6 +244,13 @@ export async function handleStoreRequest(request, env) {
   if (!env.DB) return fail("قاعدة بيانات المتجر غير مربوطة.", 503);
   const url = new URL(request.url);
   const method = request.method;
+  if (method === "GET" && url.pathname === "/store/account/loyalty") {
+    const user = await verifyFirebaseToken(request, env);
+    if (!user) return fail("سجّل الدخول لعرض نقاط المكافآت.", 401);
+    const balance = await env.DB.prepare("SELECT COALESCE(SUM(points),0) AS points FROM store_loyalty_ledger WHERE firebase_uid=?").bind(user.uid).first();
+    const recent = await env.DB.prepare("SELECT points,entry_type,description,created_at FROM store_loyalty_ledger WHERE firebase_uid=? ORDER BY created_at DESC LIMIT 30").bind(user.uid).all();
+    return response({ points: Number(balance?.points || 0), pointsPerEuro: 1, redemptionEnabled: false, note: "النقاط مكافآت ترويجية مغلقة؛ لا تُباع ولا تُحوّل ولا تُسحب نقداً.", entries: recent.results || [] });
+  }
   if (method === "GET" && url.pathname === "/store/products") return listProducts(env, url);
   if (url.pathname === "/store/orders" && method === "POST") return createOrder(request, env);
   if (url.pathname === "/store/admin/products") return adminProducts(request, env, method, null);
