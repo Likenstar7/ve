@@ -62,7 +62,7 @@ export async function handlePaypalRequest(req,env){
    for(const item of items){
     if(item.productType==="digital")continue;
     const up=await env.DB.prepare("UPDATE store_products SET stock=stock-?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND active=1 AND stock>=?").bind(item.quantity,item.id,item.quantity).run();
-    if(!up.success||up.meta?.changes!==1){for(const x of updates)await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(x.q,x.id).run();return err("المخزون تغيّر أثناء الدفع. تواصل مع المتجر لاسترداد المبلغ.",409);}
+    if(!up.success||up.meta?.changes!==1){for(const x of updates)await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(x.q,x.id).run();for(const x of warehouseUpdates)await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+?,updated_at=CURRENT_TIMESTAMP WHERE product_id=? AND warehouse_id=?").bind(x.q,x.id,x.w).run();return err("المخزون تغيّر أثناء الدفع. تواصل مع المتجر لاسترداد المبلغ.",409);}
     updates.push({id:item.id,q:item.quantity});
     const whs=await env.DB.prepare("SELECT warehouse_id,quantity,reserved FROM store_warehouse_stock WHERE product_id=? ORDER BY warehouse_id").bind(item.id).all();let left=item.quantity;
     for(const w of whs.results||[]){const n=Math.min(left,Math.max(0,w.quantity-w.reserved));if(n){await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity-?,updated_at=CURRENT_TIMESTAMP WHERE product_id=? AND warehouse_id=?").bind(n,item.id,w.warehouse_id).run();warehouseUpdates.push({id:item.id,w:w.warehouse_id,q:n});left-=n;}if(!left)break;}
