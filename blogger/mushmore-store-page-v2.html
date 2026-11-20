@@ -158,7 +158,22 @@ body[data-theme="dark"] #mushmore-v2,body.darkMode #mushmore-v2,.nB[data-theme="
 @media(max-width:1100px){#mushmore-v2 #mm2-products{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:800px){#mushmore-v2 .ms-layout{grid-template-columns:1fr}#mushmore-v2 .ms-side{position:static;grid-template-columns:1fr 1fr}.ms-note{display:none}}
 @media(max-width:600px){#mushmore-v2 .ms-head{align-items:stretch;flex-direction:column}.ms-actions{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto}.ms-search{width:100%;min-width:0}.ms-layout .ms-side{grid-template-columns:1fr}#mushmore-v2 #mm2-products{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.product>img{height:140px!important}.mm3-actions{grid-template-columns:1fr!important}.mm3-detailgrid,.mm3-checkout-grid{grid-template-columns:1fr!important}.mm3-detailimg{height:260px!important}.mm3-checkout-head{align-items:flex-start;gap:10px;flex-direction:column}.ms-track-row{flex-direction:column}.ms-track-row input{max-width:none}}
-.ms-box table{width:100%;border-collapse:collapse;font-size:12px}.ms-box td,.ms-box th{padding:9px;border-bottom:1px solid var(--ms-line);text-align:right;color:var(--ms-ink)}#ms-compare{overflow:auto}#mushmore-v2 .ms-buyer-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}#mushmore-v2 .ms-buyer-fields label{display:grid;gap:5px;font-size:12px;color:var(--ms-muted)}#mushmore-v2 .ms-buyer-fields label:nth-child(2),#mushmore-v2 .ms-buyer-fields label:nth-child(4){grid-column:1/-1}#mushmore-v2 .ms-buyer-fields input{text-align:start} @media(max-width:600px){#mushmore-v2 .ms-buyer-fields{grid-template-columns:1fr}#mushmore-v2 .ms-buyer-fields label{grid-column:auto!important}}</style>
+.ms-box table{width:100%;border-collapse:collapse;font-size:12px}.ms-box td,.ms-box th{padding:9px;border-bottom:1px solid var(--ms-line);text-align:right;color:var(--ms-ink)}#ms-compare{overflow:auto}#mushmore-v2 .ms-buyer-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}#mushmore-v2 .ms-buyer-fields label{display:grid;gap:5px;font-size:12px;color:var(--ms-muted)}#mushmore-v2 .ms-buyer-fields label:nth-child(2),#mushmore-v2 .ms-buyer-fields label:nth-child(4){grid-column:1/-1}#mushmore-v2 .ms-buyer-fields input{text-align:start} @media(max-width:600px){#mushmore-v2 .ms-buyer-fields{grid-template-columns:1fr}#mushmore-v2 .ms-buyer-fields label{grid-column:auto!important}}
+#mushmore-v2 .ms-checkout{position:fixed;inset:0;z-index:100005;display:none;overflow:auto;padding:clamp(12px,3vw,32px);background:var(--ms-soft)}
+#mushmore-v2 .ms-checkout.show{display:block}
+#mushmore-v2 .ms-checkout-box{max-width:1050px;margin:auto;padding:clamp(18px,3vw,30px);border:1px solid var(--ms-line);border-radius:18px;background:var(--ms-card);color:var(--ms-ink);box-shadow:0 20px 80px #0002}
+#mushmore-v2 .ms-checkout-head{display:flex;justify-content:space-between;align-items:center;gap:14px;border-bottom:1px solid var(--ms-line);padding-bottom:17px}
+#mushmore-v2 .ms-checkout-head h2{margin:5px 0}
+#mushmore-v2 .ms-checkout-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-top:20px}
+#mushmore-v2 .ms-checkout-grid>section{padding:16px;border:1px solid var(--ms-line);border-radius:13px;min-width:0}
+#mushmore-v2 .ms-checkout-grid label{display:grid;gap:6px;font-size:12px;color:var(--ms-muted)}
+#mushmore-v2 .ms-checkout-line{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--ms-line);font-size:12px}
+#mushmore-v2 .ms-checkout-line small{display:block;color:var(--ms-muted);margin-top:4px}
+#mushmore-v2 .ms-total{display:flex;justify-content:space-between;padding:16px 0;font-weight:850}
+#mushmore-v2 .ms-total b{font-size:20px;color:var(--ms-green)}
+#mushmore-v2 .ms-secure{padding:10px;background:var(--ms-soft);border-radius:8px;font-size:11px;color:var(--ms-muted)}
+@media(max-width:600px){#mushmore-v2 .ms-checkout-grid{grid-template-columns:1fr}#mushmore-v2 .ms-checkout-head{align-items:flex-start;flex-direction:column}}
+</style>
 
 <header class="ms-head"><div class="ms-brand"><span class="ms-logo">M</span><div><b>Mushmore</b><small>اكتشف منتجات من متاجر حول العالم</small></div></div><div class="ms-actions"><label class="ms-search">⌕ <input id="mm2-search" placeholder="ابحث عن منتج أو علامة تجارية..."></label><button class="alt" id="mm2-filter-open">☷ الفلاتر</button><button id="mm2-open-cart">السلة <b id="mm2-count">0</b></button></div></header>
 <section class="ms-hero"><span>MUSHMORE MARKETPLACE</span><h2>كل ما تبحث عنه، في مكان واحد.</h2><p>اكتشف منتجات مميزة، تسوق من بائعين حول العالم، وتابع طلباتك بسهولة.</p></section>
