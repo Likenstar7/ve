@@ -4601,7 +4601,37 @@ const mmAction=new URLSearchParams(location.search).get('mm_action')||sessionSto
 if(mmAction){sessionStorage.removeItem('mm_account_action');setTimeout(()=>{
   if(mmAction==='seller'){$('mm2-vendor-form').hidden=false;$('mm2-vendor-open').scrollIntoView({behavior:'smooth',block:'center'});}
   if(mmAction==='wallet'||mmAction==='payout'){$('mm2-earnings-load').click();$('mm2-seller-balances').scrollIntoView({behavior:'smooth',block:'center'});if(mmAction==='payout')$('mm2-payout-amount').focus();}
-  if(mmAction==='admin'){$('mm2-admin').hidden=false;$('mm2-admin').scrollIntoView({behavior:'smooth',block:'start'});}if(mmAction==='orders'){(async()=>{try{const d=await adminFetch('/store/account/orders');const box=document.createElement('div');box.id='mm-account-orders-modal';box.style.cssText='position:fixed;inset:0;z-index:100100;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px';const orders=d.orders||[];box.innerHTML='<section style="width:min(760px,96vw);max-height:85vh;overflow:auto;background:#fff;color:#17202b;border-radius:16px;padding:18px"><header style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="margin:0">طلباتي</h2><button type="button" data-orders-close>إغلاق</button></header><div style="margin-top:14px">'+(orders.map(o=>'<article style="padding:13px 0;border-top:1px solid #e5e7eb"><b>'+esc(o.orderNumber)+'</b><p style="margin:5px 0">'+esc(o.status)+' • '+esc(o.createdAt||'')+' • '+money(o.total,o.currency)+'</p><p style="margin:5px 0;color:#667085">'+(o.items||[]).map(x=>esc(x.title)+' × '+Number(x.quantity||1)).join('، ')+'</p>'+(o.trackingNumber?'<p style="margin:5px 0">رقم التتبع: <b>'+esc(o.trackingNumber)+'</b> '+(o.trackingUrl?'<a href="'+esc(o.trackingUrl)+'" target="_blank" rel="noopener">تتبع لدى شركة الشحن</a>':'')+'</p>':'<small>لم يُسند رقم تتبع لهذا الطلب بعد.</small>')+'</article>').join('')||'<p>لا توجد طلبات مرتبطة بهذا الحساب بعد.</p>')+'</div></section>';document.body.appendChild(box);box.addEventListener('click',e=>{if(e.target===box||e.target.closest('[data-orders-close]'))box.remove()})}catch(e){msg('mm2-s-status',e.message)}})()}
+  if(mmAction==='admin'){$('mm2-admin').hidden=false;$('mm2-admin').scrollIntoView({behavior:'smooth',block:'start'});}if(mmAction==='orders'){
+    (async()=>{
+      try{
+        const d=await adminFetch('/store/account/orders');
+        const modal=document.createElement('div');
+        modal.id='mm-account-orders-modal';
+        modal.style.cssText='position:fixed;inset:0;z-index:100100;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px';
+        const card=document.createElement('section');
+        card.style.cssText='width:min(760px,96vw);max-height:85vh;overflow:auto;background:#fff;color:#17202b;border-radius:16px;padding:18px';
+        const header=document.createElement('header');
+        header.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px';
+        const heading=document.createElement('h2');heading.textContent='طلباتي';heading.style.margin='0';
+        const close=document.createElement('button');close.type='button';close.textContent='إغلاق';close.onclick=()=>modal.remove();
+        header.append(heading,close);card.appendChild(header);
+        const list=document.createElement('div');list.style.marginTop='14px';
+        const orders=d.orders||[];
+        if(!orders.length){const empty=document.createElement('p');empty.textContent='لا توجد طلبات مرتبطة بهذا الحساب بعد.';list.appendChild(empty)}
+        orders.forEach(o=>{
+          const article=document.createElement('article');article.style.cssText='padding:13px 0;border-top:1px solid #e5e7eb';
+          const number=document.createElement('b');number.textContent=o.orderNumber||'';article.appendChild(number);
+          const info=document.createElement('p');info.textContent=[o.status,o.createdAt,money(o.total,o.currency)].filter(Boolean).join(' • ');article.appendChild(info);
+          const items=document.createElement('p');items.style.color='#667085';items.textContent=(o.items||[]).map(x=>(x.title||'منتج')+' × '+Number(x.quantity||1)).join('، ');article.appendChild(items);
+          if(o.trackingNumber){const track=document.createElement('p');track.textContent='رقم التتبع: '+o.trackingNumber+' ';if(o.trackingUrl){const link=document.createElement('a');link.href=o.trackingUrl;link.target='_blank';link.rel='noopener';link.textContent='تتبع لدى شركة الشحن';track.appendChild(link)}article.appendChild(track)}
+          else{const pending=document.createElement('small');pending.textContent='لم يُسند رقم تتبع لهذا الطلب بعد.';article.appendChild(pending)}
+          list.appendChild(article);
+        });
+        card.appendChild(list);modal.appendChild(card);document.body.appendChild(modal);
+        modal.addEventListener('click',e=>{if(e.target===modal)modal.remove()});
+      }catch(e){msg('mm2-s-status',e.message)}
+    })()
+  }
 },900);}
 if(sessionStorage.getItem('mm_global_checkout')==='1'){sessionStorage.removeItem('mm_global_checkout');setTimeout(()=>{$('mm2-open-cart').click();setTimeout(()=>$('mm2-checkout-open').click(),350)},900);}
 })();
