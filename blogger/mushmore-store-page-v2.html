@@ -190,5 +190,12 @@ $('mm2-c-add').onclick=async()=>{try{await adminFetch('/store/admin/carriers',{m
 $('mm2-c-load').onclick=async()=>{try{const d=await adminFetch('/store/admin/carriers');$('mm2-c-list').innerHTML=(d.carriers||[]).map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+esc(c.integration_type)+'</td><td>'+(c.enabled?'مفعّل':'متوقف')+'</td></tr>').join('');$('mm2-s-carrier').innerHTML=(d.carriers||[]).filter(c=>c.enabled).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>').join('')}catch(e){msg('mm2-c-status',e.message)}};
 $('mm2-s-create').onclick=async()=>{try{await adminFetch('/store/admin/shipments',{method:'POST',body:JSON.stringify({orderId:$('mm2-s-order').value,carrierId:$('mm2-s-carrier').value,trackingNumber:$('mm2-s-tracking').value,warehouseId:$('mm2-s-warehouse').value})});msg('mm2-s-status','تم تسجيل الشحنة ورقم التتبع.',true)}catch(e){msg('mm2-s-status',e.message)}};
 loadProducts();
+const mmAction=new URLSearchParams(location.search).get('mm_action')||sessionStorage.getItem('mm_account_action');
+if(mmAction){sessionStorage.removeItem('mm_account_action');setTimeout(()=>{
+  if(mmAction==='seller'){$('mm2-vendor-form').hidden=false;$('mm2-vendor-open').scrollIntoView({behavior:'smooth',block:'center'});}
+  if(mmAction==='wallet'||mmAction==='payout'){$('mm2-earnings-load').click();$('mm2-seller-balances').scrollIntoView({behavior:'smooth',block:'center'});if(mmAction==='payout')$('mm2-payout-amount').focus();}
+  if(mmAction==='admin'){$('mm2-admin').hidden=false;$('mm2-admin').scrollIntoView({behavior:'smooth',block:'start'});}
+},900);}
+if(sessionStorage.getItem('mm_global_checkout')==='1'){sessionStorage.removeItem('mm_global_checkout');setTimeout(()=>{$('mm2-open-cart').click();setTimeout(()=>$('mm2-checkout-open').click(),350)},900);}
 })();
 </script>
