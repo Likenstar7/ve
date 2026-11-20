@@ -218,10 +218,10 @@ export async function handleMarketplaceRequest(req,env){
    return json({orders:(r.results||[]).map(o=>({id:o.id,orderNumber:o.order_number,items:JSON.parse(o.items_json||"[]"),total:Number(o.total_cents||0)/100,currency:o.currency,paymentMethod:o.payment_method,paymentStatus:o.payment_status,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,createdAt:o.created_at,shippedAt:o.shipped_at,deliveredAt:o.delivered_at}))});
  }
  // Public tracking lookup uses the carrier tracking number only; no buyer details are exposed.
- const publicTrackMatch=p.match(/^\\/store\\/track\\/([^/]+)$/);
- if(publicTrackMatch&&m==="GET"){
-   let trackingNumber="";try{trackingNumber=decodeURIComponent(publicTrackMatch[1])}catch{return error("رقم التتبع غير صالح.");}
-   trackingNumber=text(trackingNumber,160);if(!trackingNumber)return error("أدخل رقم التتبع.");
+ const trackingPrefix="/store/track/";
+ if(p.startsWith(trackingPrefix)&&m==="GET"){
+   let trackingNumber="";try{trackingNumber=decodeURIComponent(p.slice(trackingPrefix.length))}catch{return error("رقم التتبع غير صالح.");}
+   trackingNumber=text(trackingNumber,160);if(!trackingNumber||trackingNumber.includes("/"))return error("أدخل رقم التتبع.");
    const shipment=await env.DB.prepare("SELECT s.id,s.tracking_number,s.tracking_url,s.status,s.shipped_at,s.delivered_at,o.order_number,c.name AS carrier_name FROM store_shipments s JOIN store_orders o ON o.id=s.order_id LEFT JOIN store_shipping_carriers c ON c.id=s.carrier_id WHERE s.tracking_number=? LIMIT 1").bind(trackingNumber).first();
    if(!shipment)return error("رقم التتبع غير موجود.",404);
    const events=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC LIMIT 100").bind(shipment.id).all();
