@@ -4619,7 +4619,7 @@ if(mmAction){sessionStorage.removeItem('mm_account_action');setTimeout(()=>{
         header.append(heading,close);card.appendChild(header);
         const list=document.createElement('div');list.style.marginTop='14px';
         const orders=d.orders||[];
-        try{const loyalty=await adminFetch('/store/account/loyalty');const points=document.createElement('p');points.textContent='نقاط مكافآتي: '+Number(loyalty.points||0)+' نقطة — تكسب نقطة عن كل يورو مدفوع عبر حسابك؛ النقاط مكافآت غير قابلة للسحب أو التحويل.';points.style.cssText='margin:12px 0;padding:10px;background:#f2f7f4;border-radius:10px;font-weight:700';list.appendChild(points)}catch(e){}
+        try{const loyalty=await adminFetch('/store/account/loyalty');const points=document.createElement('p');points.textContent='نقاط مكافآتي: '+Number(loyalty.points||0)+' نقطة — تكسب نقطة عن كل يورو مدفوع عبر حسابك؛ النقاط مكافآت غير قابلة للسحب أو التحويل، واستخدامها كخصم لم يُفعّل بعد.';points.style.cssText='margin:12px 0;padding:10px;background:#f2f7f4;border-radius:10px;font-weight:700';list.appendChild(points)}catch(e){}
         if(!orders.length){const empty=document.createElement('p');empty.textContent='لا توجد طلبات مرتبطة بهذا الحساب بعد.';list.appendChild(empty)}
         orders.forEach(o=>{
           const article=document.createElement('article');article.style.cssText='padding:13px 0;border-top:1px solid #e5e7eb';
