@@ -4,6 +4,16 @@ const SANDBOX = "https://api-m.sandbox.paypal.com";
 const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content-type":"application/json; charset=utf-8","access-control-allow-origin":ORIGIN,"access-control-allow-methods":"GET, POST, OPTIONS","access-control-allow-headers":"Content-Type, Authorization","cache-control":"no-store","vary":"Origin"}});
 const err=(m,s=400)=>json({error:m},s);
 const txt=(v,n=254)=>typeof v==="string"?v.trim().slice(0,n):"";
+async function verifiedBuyer(req,env,expectedEmail){
+ const match=(req.headers.get("Authorization")||"").match(/^Bearer\\s+(.+)$/i);
+ if(!match||!env.FIREBASE_API_KEY)return null;
+ try{
+  const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+encodeURIComponent(env.FIREBASE_API_KEY),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:match[1]})});
+  if(!r.ok)return null;const d=await r.json(),u=d.users?.[0];
+  if(!u?.localId||String(u.email||"").toLowerCase()!==expectedEmail)return null;
+  return u.localId;
+ }catch{return null}
+}
 function paypalBase(env){return env.PAYPAL_ENVIRONMENT==="live"?API:SANDBOX}
 async function paypalToken(env){
  if(!env.PAYPAL_CLIENT_ID||!env.PAYPAL_CLIENT_SECRET)throw new Error("PayPal غير مضبوط بعد. أضف PAYPAL_CLIENT_ID وPAYPAL_CLIENT_SECRET إلى Cloudflare Worker Secrets.");
@@ -69,8 +79,15 @@ export async function handlePaypalRequest(req,env){
     if(left){for(const x of updates)await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(x.q,x.id).run();for(const x of warehouseUpdates)await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+? WHERE product_id=? AND warehouse_id=?").bind(x.q,x.id,x.w).run();return err("مخزون المستودعات غير متزامن. تواصل مع المتجر لاسترداد المبلغ.",409);}
    }
    const id=crypto.randomUUID(),number="MM-"+Date.now().toString(36).toUpperCase()+"-"+crypto.randomUUID().slice(0,4).toUpperCase(),total=payment.amount_cents;
+   const buyerUid=await verifiedBuyer(req,env,email);
    try{
-    await env.DB.prepare("INSERT INTO store_orders(id,order_number,customer_name,customer_email,customer_phone,shipping_address,shipping_city,shipping_postcode,shipping_country,items_json,subtotal_cents,shipping_cents,total_cents,currency,payment_method,payment_status,order_status,buyer_latitude,buyer_longitude) VALUES(?,?,?,?,?,?,?,?,?,?,?,0,?,'EUR','online','paid','new',?,?)").bind(id,number,payment.customer_name||email,email,payment.customer_phone||"",payment.shipping_address||"",payment.shipping_city||"",payment.shipping_postcode||"",payment.shipping_country||"",JSON.stringify(items),total,total,payment.buyer_latitude,payment.buyer_longitude).run();
+    await env.DB.prepare("INSERT INTO store_orders(id,order_number,customer_uid,customer_name,customer_email,customer_phone,shipping_address,shipping_city,shipping_postcode,shipping_country,items_json,subtotal_cents,shipping_cents,total_cents,currency,payment_method,payment_status,order_status,buyer_latitude,buyer_longitude) VALUES(?,?,?,?,?,?,?,?,?,?,?, ?,0,?,'EUR','online','paid','new',?,?)").bind(id,number,buyerUid,payment.customer_name||email,email,payment.customer_phone||"",payment.shipping_address||"",payment.shipping_city||"",payment.shipping_postcode||"",payment.shipping_country||"",JSON.stringify(items),total,total,payment.buyer_latitude,payment.buyer_longitude).run();
+    await env.DB.prepare("UPDATE store_paypal_payments SET status='completed',order_id=?,updated_at=CURRENT_TIMESTAMP WHERE paypal_order_id=?").bind(id,paypalId).run();
+    for(const item of items){if(!item.sellerId)continue;const gross=item.unitPriceCents*item.quantity,net=Math.floor(gross*(10000-item.commissionBps)/10000);if(net>0)await env.DB.prepare("INSERT OR IGNORE INTO store_seller_ledger(id,seller_id,order_id,entry_type,amount_cents,currency,status,description,reference) VALUES(?,?,?,'sale_credit',?,'EUR','available',?,?)").bind(crypto.randomUUID(),item.sellerId,id,net,"مستحقات بيع SKU "+(item.sku||item.id),item.sku||item.id).run();}
+    if(buyerUid){
+      const rewardPoints=Math.floor(total/100);
+      if(rewardPoints>0)await env.DB.prepare("INSERT OR IGNORE INTO store_loyalty_ledger(id,firebase_uid,customer_email,order_id,points,entry_type,description) VALUES(?,?,?,?,?,'purchase_reward',?)").bind(crypto.randomUUID(),buyerUid,email,id,rewardPoints,"مكافأة شراء Mushmore المدفوع").run();
+    }
     await env.DB.prepare("UPDATE store_paypal_payments SET status='completed',order_id=?,updated_at=CURRENT_TIMESTAMP WHERE paypal_order_id=?").bind(id,paypalId).run();
     for(const item of items){if(!item.sellerId)continue;const gross=item.unitPriceCents*item.quantity,net=Math.floor(gross*(10000-item.commissionBps)/10000);if(net>0)await env.DB.prepare("INSERT OR IGNORE INTO store_seller_ledger(id,seller_id,order_id,entry_type,amount_cents,currency,status,description,reference) VALUES(?,?,?,'sale_credit',?,'EUR','available',?,?)").bind(crypto.randomUUID(),item.sellerId,id,net,"مستحقات بيع SKU "+(item.sku||item.id),item.sku||item.id).run();}
    }catch(e){for(const x of updates)await env.DB.prepare("UPDATE store_products SET stock=stock+? WHERE id=?").bind(x.q,x.id).run();for(const x of warehouseUpdates)await env.DB.prepare("UPDATE store_warehouse_stock SET quantity=quantity+? WHERE product_id=? AND warehouse_id=?").bind(x.q,x.id,x.w).run();throw e;}
