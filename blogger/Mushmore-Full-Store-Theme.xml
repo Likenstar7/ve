@@ -4266,7 +4266,7 @@ class TableOfContents { constructor({ from, to }) { this.fromElement = from; thi
                           </b:if>
                         </b:includable>
                       </b:widget>
-                      <b:widget id='HTML1' locked='false' title='Mushmore Store' type='HTML' version='2' visible='true'><b:widget-settings><b:widget-setting name='content'><![CDATA[<!-- Mushmore Store v2.0 — paste into Blogger Page in HTML view. -->
+                      <b:widget id='HTML3' locked='false' title='Mushmore Store' type='HTML' version='2' visible='true'><b:widget-settings><b:widget-setting name='content'><![CDATA[<!-- Mushmore Store v2.0 — paste into Blogger Page in HTML view. -->
 <div id="mushmore-v2" dir="rtl">
 <style>
 #mushmore-v2{--ink:#182235;--muted:#718096;--line:#e7ebf2;--brand:#315bd6;--soft:#f5f7fb;color:var(--ink);font:inherit}
