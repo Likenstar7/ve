@@ -18,6 +18,11 @@ async function seller(req,env){const u=await identity(req,env);if(!u)return null
 function trackingUrl(template,number){return template?template.replace(/\{tracking\}/g,encodeURIComponent(number)):""}
 export async function handleMarketplaceRequest(req,env){
  const url=new URL(req.url),p=url.pathname,m=req.method;
+ // Mushmore operates from Algeria: do not accept, store, or pay out virtual-asset wallets.
+ // Fiat payout rails require a separately approved regulated provider and are not implemented here.
+ if (p==="/store/seller/wallets" || p==="/store/seller/payouts" || p==="/store/admin/payouts" || /^\\/store\\/admin\\/(wallets|payouts)\\//.test(p)) {
+   return error("السحب عبر USDT أو أي أصل افتراضي متوقف. لا تتوفر حالياً قناة صرف نقدية معتمدة؛ لا ترسل عنوان محفظة أو تطلب سحباً حتى اعتماد مزود قانوني.", 410);
+ }
  if(!p.startsWith("/store/"))return null;
  if(req.headers.get("Origin")!==ORIGIN)return new Response("Forbidden",{status:403});
  if(m==="OPTIONS")return new Response(null,{status:204,headers:{"access-control-allow-origin":ORIGIN,"access-control-allow-methods":"GET, POST, PATCH, PUT, DELETE, OPTIONS","access-control-allow-headers":"Content-Type, Authorization"}});
