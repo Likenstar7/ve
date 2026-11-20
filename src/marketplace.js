@@ -210,5 +210,62 @@ export async function handleMarketplaceRequest(req,env){
    let events=[];if(sh){const r=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC").bind(sh.id).all();events=r.results||[]}
    return json({orderNumber:o.order_number,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,shippedAt:o.shipped_at,deliveredAt:o.delivered_at,events});
  }
+
+ // Customer wishlist: server-side persistence for signed-in customers.
+ if(p==="/store/account/wishlist"&&(m==="GET"||m==="POST"||m==="DELETE")){
+   const u=await identity(req,env);if(!u)return error("سجّل الدخول لإدارة قائمة المحفوظات.",401);
+   if(m==="GET"){const r=await env.DB.prepare("SELECT product_id FROM store_wishlists WHERE firebase_uid=? ORDER BY created_at DESC").bind(u.uid).all();return json({productIds:(r.results||[]).map(x=>x.product_id)});}
+   const d=await body(req),productId=text(d&&d.productId,80);if(!productId)return error("معرّف المنتج مطلوب.");
+   if(m==="POST"){const pdt=await env.DB.prepare("SELECT id FROM store_products WHERE id=? AND active=1").bind(productId).first();if(!pdt)return error("المنتج غير متاح.",404);await env.DB.prepare("INSERT OR IGNORE INTO store_wishlists(firebase_uid,product_id) VALUES(?,?)").bind(u.uid,productId).run();return json({success:true,saved:true});}
+   await env.DB.prepare("DELETE FROM store_wishlists WHERE firebase_uid=? AND product_id=?").bind(u.uid,productId).run();return json({success:true,saved:false});
+ }
+ // Customer address book. Addresses are private to their Firebase account.
+ if(p==="/store/account/addresses"&&(m==="GET"||m==="POST")){
+   const u=await identity(req,env);if(!u)return error("سجّل الدخول لإدارة عناوينك.",401);
+   if(m==="GET"){const r=await env.DB.prepare("SELECT id,label,recipient_name,phone,address_line,city,postcode,country_code,is_default,created_at FROM store_customer_addresses WHERE firebase_uid=? ORDER BY is_default DESC,created_at DESC").bind(u.uid).all();return json({addresses:r.results||[]});}
+   const d=await body(req),name=text(d&&d.recipientName,120),phone=text(d&&d.phone,50),line=text(d&&d.addressLine,300),city=text(d&&d.city,100),postcode=text(d&&d.postcode,30),country=text(d&&d.countryCode,2).toUpperCase(),label=text(d&&d.label,40),makeDefault=!!(d&&d.isDefault);
+   if(!name||!phone||!line||!city||!/^[A-Z]{2}$/.test(country))return error("أكمل اسم المستلم والهاتف والعنوان والمدينة ورمز البلد بحرفين.");
+   const id=crypto.randomUUID();
+   if(makeDefault)await env.DB.prepare("UPDATE store_customer_addresses SET is_default=0 WHERE firebase_uid=?").bind(u.uid).run();
+   await env.DB.prepare("INSERT INTO store_customer_addresses(id,firebase_uid,label,recipient_name,phone,address_line,city,postcode,country_code,is_default) VALUES(?,?,?,?,?,?,?,?,?,?)").bind(id,u.uid,label,name,phone,line,city,postcode,country,makeDefault?1:0).run();
+   return json({success:true,id},201);
+ }
+ const addressMatch=p.match(/^\/store\/account\/addresses\/([a-zA-Z0-9-]+)$/);
+ if(addressMatch&&(m==="PUT"||m==="DELETE")){
+   const u=await identity(req,env);if(!u)return error("سجّل الدخول أولاً.",401);
+   const existing=await env.DB.prepare("SELECT id FROM store_customer_addresses WHERE id=? AND firebase_uid=?").bind(addressMatch[1],u.uid).first();if(!existing)return error("العنوان غير موجود.",404);
+   if(m==="DELETE"){await env.DB.prepare("DELETE FROM store_customer_addresses WHERE id=? AND firebase_uid=?").bind(addressMatch[1],u.uid).run();return json({success:true});}
+   const d=await body(req),name=text(d&&d.recipientName,120),phone=text(d&&d.phone,50),line=text(d&&d.addressLine,300),city=text(d&&d.city,100),postcode=text(d&&d.postcode,30),country=text(d&&d.countryCode,2).toUpperCase(),label=text(d&&d.label,40),makeDefault=!!(d&&d.isDefault);
+   if(!name||!phone||!line||!city||!/^[A-Z]{2}$/.test(country))return error("بيانات العنوان غير مكتملة.");
+   if(makeDefault)await env.DB.prepare("UPDATE store_customer_addresses SET is_default=0 WHERE firebase_uid=?").bind(u.uid).run();
+   await env.DB.prepare("UPDATE store_customer_addresses SET label=?,recipient_name=?,phone=?,address_line=?,city=?,postcode=?,country_code=?,is_default=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND firebase_uid=?").bind(label,name,phone,line,city,postcode,country,makeDefault?1:0,addressMatch[1],u.uid).run();return json({success:true});
+ }
+ // Public product reviews are visible only after moderation.
+ const reviewMatch=p.match(/^\/store\/products\/([a-zA-Z0-9-]+)\/reviews$/);
+ if(reviewMatch&&m==="GET"){
+   const r=await env.DB.prepare("SELECT id,customer_name,rating,title,body,verified_purchase,created_at FROM store_product_reviews WHERE product_id=? AND status='approved' ORDER BY created_at DESC LIMIT 50").bind(reviewMatch[1]).all();
+   const stats=await env.DB.prepare("SELECT COUNT(*) AS count,COALESCE(AVG(rating),0) AS average FROM store_product_reviews WHERE product_id=? AND status='approved'").bind(reviewMatch[1]).first();
+   return json({reviews:r.results||[],count:Number(stats.count||0),average:Number(stats.average||0)});
+ }
+ if(p==="/store/account/reviews"&&m==="POST"){
+   const u=await identity(req,env);if(!u)return error("سجّل الدخول لإضافة تقييم.",401);
+   const d=await body(req),productId=text(d&&d.productId,80),rating=Number(d&&d.rating),title=text(d&&d.title,120),review=text(d&&d.body,2000);
+   if(!productId||!Number.isInteger(rating)||rating<1||rating>5||!review)return error("اختر تقييماً من نجمة إلى خمس واكتب مراجعتك.");
+   const pdt=await env.DB.prepare("SELECT id FROM store_products WHERE id=? AND active=1").bind(productId).first();if(!pdt)return error("المنتج غير متاح.",404);
+   try{await env.DB.prepare("INSERT INTO store_product_reviews(id,product_id,firebase_uid,customer_name,rating,title,body,status) VALUES(?,?,?,?,?,?,?,'pending')").bind(crypto.randomUUID(),productId,u.uid,u.name||u.email,rating,title,review).run();}
+   catch{return error("سبق أن أرسلت تقييماً لهذا المنتج.",409);}
+   return json({success:true,status:"pending",message:"وصل تقييمك وينتظر مراجعة الإدارة قبل نشره."},201);
+ }
+ // Admin review moderation.
+ if(p==="/store/admin/reviews"&&m==="GET"){
+   if(!await admin(req,env))return error("غير مصرح.",401);
+   const r=await env.DB.prepare("SELECT r.*,p.title AS product_title FROM store_product_reviews r JOIN store_products p ON p.id=r.product_id ORDER BY r.created_at DESC LIMIT 200").all();return json({reviews:r.results||[]});
+ }
+ const reviewAdminMatch=p.match(/^\/store\/admin\/reviews\/([a-zA-Z0-9-]+)$/);
+ if(reviewAdminMatch&&m==="PATCH"){
+   if(!await admin(req,env))return error("غير مصرح.",401);
+   const d=await body(req),status=text(d&&d.status,20);if(!["approved","rejected","pending"].includes(status))return error("حالة التقييم غير صالحة.");
+   await env.DB.prepare("UPDATE store_product_reviews SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(status,reviewAdminMatch[1]).run();return json({success:true,status});
+ }
  return null;
 }
