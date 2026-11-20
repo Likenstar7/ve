@@ -5,7 +5,7 @@ const json=(d,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{"content
 const err=(m,s=400)=>json({error:m},s);
 const txt=(v,n=254)=>typeof v==="string"?v.trim().slice(0,n):"";
 async function verifiedBuyer(req,env,expectedEmail){
- const match=(req.headers.get("Authorization")||"").match(/^Bearer\\s+(.+)$/i);
+ const match=(req.headers.get("Authorization")||"").match(/^Bearer\s+(.+)$/i);
  if(!match||!env.FIREBASE_API_KEY)return null;
  try{
   const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+encodeURIComponent(env.FIREBASE_API_KEY),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken:match[1]})});
