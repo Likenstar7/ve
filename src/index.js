@@ -1,4 +1,5 @@
 import { handleStoreRequest } from "./store.js";
+import { handlePayhipRequest } from "./payhip.js";
 
 const ALLOWED_ORIGIN = "https://mushmoreby.blogspot.com";
 const OTP_TTL_SECONDS = 300;
@@ -204,6 +205,8 @@ export default {
     }
 
     const url = new URL(request.url);
+    const payhipResponse = await handlePayhipRequest(request, env);
+    if (payhipResponse) return payhipResponse;
     // Public health check: allow direct browser visits without an Origin header.
     if (request.method === "GET" && url.pathname === "/health") {
       return json({ ok: true, service: "mushmore-auth" }, 200, origin || ALLOWED_ORIGIN);
