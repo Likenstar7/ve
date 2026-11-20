@@ -202,9 +202,10 @@ export async function handleMarketplaceRequest(req,env){
    await env.DB.prepare("INSERT INTO store_shipment_events(id,shipment_id,status,description,source) VALUES(?,?,'shipped','تم تسليم الشحنة لشركة النقل','manual')").bind(crypto.randomUUID(),id).run();
    return json({success:true,shipmentId:id,trackingUrl:track},201);
  }
- match=p.match(/^\\/store\\/track\\/([a-zA-Z0-9-]+)$/);
- if(match&&m==="GET"){
-   const lookup=text(match[1],160);
+ const trackingPrefix="/store/track/";
+ if(p.startsWith(trackingPrefix)&&m==="GET"){
+   const lookup=text(p.slice(trackingPrefix.length),160);
+   if(!lookup||lookup.includes("/"))return error("رقم الطلب أو التتبع غير صالح.");
    const o=await env.DB.prepare("SELECT o.id,o.order_number,o.order_status,o.shipping_method,o.tracking_number,o.tracking_url,o.shipped_at,o.delivered_at,s.id AS shipment_id,s.status AS shipment_status,s.tracking_number AS shipment_tracking_number,s.tracking_url AS shipment_tracking_url,c.name AS carrier_name FROM store_orders o LEFT JOIN store_shipments s ON s.order_id=o.id LEFT JOIN store_shipping_carriers c ON c.id=s.carrier_id WHERE o.order_number=? OR o.tracking_number=? OR s.tracking_number=? ORDER BY s.created_at DESC LIMIT 1").bind(lookup,lookup,lookup).first();
    if(!o)return error("لم يتم العثور على الطلب أو رقم التتبع.",404);
    let events=[];if(o.shipment_id){const r=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC LIMIT 100").bind(o.shipment_id).all();events=r.results||[]}
