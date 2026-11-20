@@ -211,6 +211,23 @@ export async function handleMarketplaceRequest(req,env){
    return json({orderNumber:o.order_number,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,shippedAt:o.shipped_at,deliveredAt:o.delivered_at,events});
  }
 
+ // Customer order history. Only the authenticated owner can read their orders.
+ if(p==="/store/account/orders"&&m==="GET"){
+   const u=await identity(req,env);if(!u)return error("سجّل الدخول لعرض طلباتك.",401);
+   const r=await env.DB.prepare("SELECT id,order_number,items_json,total_cents,currency,payment_method,payment_status,order_status,shipping_method,tracking_number,tracking_url,created_at,shipped_at,delivered_at FROM store_orders WHERE customer_uid=? ORDER BY created_at DESC LIMIT 100").bind(u.uid).all();
+   return json({orders:(r.results||[]).map(o=>({id:o.id,orderNumber:o.order_number,items:JSON.parse(o.items_json||"[]"),total:Number(o.total_cents||0)/100,currency:o.currency,paymentMethod:o.payment_method,paymentStatus:o.payment_status,status:o.order_status,carrier:o.shipping_method,trackingNumber:o.tracking_number,trackingUrl:o.tracking_url,createdAt:o.created_at,shippedAt:o.shipped_at,deliveredAt:o.delivered_at}))});
+ }
+ // Public tracking lookup uses the carrier tracking number only; no buyer details are exposed.
+ const publicTrackMatch=p.match(/^\\/store\\/track\\/([^/]+)$/);
+ if(publicTrackMatch&&m==="GET"){
+   let trackingNumber="";try{trackingNumber=decodeURIComponent(publicTrackMatch[1])}catch{return error("رقم التتبع غير صالح.");}
+   trackingNumber=text(trackingNumber,160);if(!trackingNumber)return error("أدخل رقم التتبع.");
+   const shipment=await env.DB.prepare("SELECT s.id,s.tracking_number,s.tracking_url,s.status,s.shipped_at,s.delivered_at,o.order_number,c.name AS carrier_name FROM store_shipments s JOIN store_orders o ON o.id=s.order_id LEFT JOIN store_shipping_carriers c ON c.id=s.carrier_id WHERE s.tracking_number=? LIMIT 1").bind(trackingNumber).first();
+   if(!shipment)return error("رقم التتبع غير موجود.",404);
+   const events=await env.DB.prepare("SELECT status,description,location,event_at FROM store_shipment_events WHERE shipment_id=? ORDER BY event_at DESC LIMIT 100").bind(shipment.id).all();
+   return json({orderNumber:shipment.order_number,status:shipment.status,carrier:shipment.carrier_name||"",trackingNumber:shipment.tracking_number,trackingUrl:shipment.tracking_url,shippedAt:shipment.shipped_at,deliveredAt:shipment.delivered_at,events:events.results||[]});
+ }
+
  // Customer wishlist: server-side persistence for signed-in customers.
  if(p==="/store/account/wishlist"&&(m==="GET"||m==="POST"||m==="DELETE")){
    const u=await identity(req,env);if(!u)return error("سجّل الدخول لإدارة قائمة المحفوظات.",401);
